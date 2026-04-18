@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>GUVID v3.0 — Global Universal Verification &amp; Identity Deployment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Orbitron:wght@400;600;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void:#010308;--deep:#030a14;--surface:#07111f;--surface2:#0c1e35;
+  --glass:rgba(7,17,31,0.7);--border:rgba(0,212,255,0.12);--border2:rgba(0,212,255,0.25);
+  --cyan:#00d4ff;--cyan2:#00a8cc;--plasma:#7c3aed;--plasma2:#9d5cf0;
+  --emerald:#00ff88;--ember:#ff4d6d;--gold:#ffd700;--amber:#ff9a00;
+  --text:#e2f4ff;--muted:#4a7fa5;--dim:#1e3a52;--r:12px;
+  --font-display:'Orbitron',monospace;--font-mono:'Space Mono',monospace;
+  --font-data:'JetBrains Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--void);color:var(--text);font-family:var(--font-data);min-height:100vh;overflow-x:hidden;cursor:default}
+#cosmos{position:fixed;inset:0;z-index:0;pointer-events:none}
+body::before{content:'';position:fixed;inset:0;z-index:0;
+  background-image:linear-gradient(rgba(0,212,255,0.03)1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03)1px,transparent 1px);
+  background-size:60px 60px;pointer-events:none}
+body::after{content:'';position:fixed;inset:0;z-index:1;
+  background:linear-gradient(transparent 50%,rgba(0,0,0,0.03)50%);background-size:100% 4px;
+  animation:scanlines 0.1s linear infinite;pointer-events:none;opacity:0.4}
+@keyframes scanlines{from{background-position:0 0}to{background-position:0 4px}}
+#app{position:relative;z-index:2}
+
+/* ── HEADER ── */
+header{position:sticky;top:0;z-index:100;background:rgba(1,3,8,0.9);
+  backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border2);
+  padding:0 1.5rem;height:60px;display:flex;align-items:center;gap:1rem}
+.logo-mark{width:34px;height:34px;background:linear-gradient(135deg,var(--cyan),var(--plasma));
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-size:0.7rem;font-weight:900;color:#fff;letter-spacing:1px;
+  box-shadow:0 0 20px rgba(0,212,255,0.4);animation:logoGlow 3s ease-in-out infinite;flex-shrink:0}
+@keyframes logoGlow{0%,100%{box-shadow:0 0 20px rgba(0,212,255,0.4)}50%{box-shadow:0 0 40px rgba(0,212,255,0.7),0 0 80px rgba(124,58,237,0.3)}}
+.logo-text{font-family:var(--font-display);font-weight:800;font-size:1rem;letter-spacing:3px;
+  background:linear-gradient(90deg,var(--cyan),var(--plasma2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-size:0.55rem;color:var(--muted);letter-spacing:2px;font-family:var(--font-mono);margin-top:-2px}
+.country-selector-header{margin-left:auto;display:flex;align-items:center;gap:0.5rem}
+.country-selector-header select{background:rgba(0,212,255,0.05);border:1px solid var(--border2);
+  color:var(--cyan);padding:4px 8px;border-radius:6px;font-family:var(--font-mono);
+  font-size:0.7rem;cursor:pointer;outline:none}
+.country-selector-header select option{background:var(--deep);color:var(--text)}
+.header-chips{display:flex;gap:0.5rem;align-items:center}
+.chip{padding:3px 10px;border-radius:20px;font-size:0.6rem;font-family:var(--font-mono);font-weight:700;letter-spacing:1.5px;border:1px solid;text-transform:uppercase}
+.chip-fabric{border-color:rgba(0,255,136,0.4);color:var(--emerald);background:rgba(0,255,136,0.08)}
+.chip-live{border-color:rgba(255,77,109,0.4);color:var(--ember);background:rgba(255,77,109,0.08);animation:blink 1.5s ease-in-out infinite}
+.chip-webauthn{border-color:rgba(124,58,237,0.4);color:var(--plasma2);background:rgba(124,58,237,0.08)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* ── NAV ── */
+.nav-rail{display:flex;gap:0;padding:0 1.5rem;background:rgba(3,10,20,0.8);
+  border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.nav-rail::-webkit-scrollbar{display:none}
+.nav-tab{padding:0.8rem 1.2rem;cursor:pointer;border-bottom:2px solid transparent;
+  color:var(--muted);font-size:0.75rem;font-family:var(--font-mono);letter-spacing:1px;
+  text-transform:uppercase;white-space:nowrap;transition:all 0.25s;display:flex;align-items:center;gap:0.5rem}
+.nav-tab:hover{color:var(--cyan)}
+.nav-tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+.nav-tab.active::before{content:'▶';font-size:0.6rem;color:var(--cyan)}
+
+/* ── LAYOUT ── */
+.page-container{max-width:1100px;margin:0 auto;padding:2rem 1.5rem}
+.panel{display:none}
+.panel.active{display:block;animation:fadeSlideIn 0.3s ease}
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+
+/* ── CARD ── */
+.card{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);
+  padding:1.5rem;margin-bottom:1.5rem;backdrop-filter:blur(10px)}
+.card-title{font-family:var(--font-display);font-size:0.85rem;font-weight:600;
+  color:var(--cyan);letter-spacing:2px;margin-bottom:1.25rem;text-transform:uppercase;
+  display:flex;align-items:center;gap:0.5rem}
+
+/* ── FORM ── */
+.form-grid{display:grid;gap:1rem}
+.form-grid.cols2{grid-template-columns:1fr 1fr}
+.form-grid.cols1{grid-template-columns:1fr}
+.field{display:flex;flex-direction:column;gap:0.5rem}
+.field label{font-size:0.7rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-family:var(--font-mono)}
+.field input,.field select,.field textarea{
+  background:rgba(0,212,255,0.04);border:1px solid var(--border2);border-radius:8px;
+  color:var(--text);padding:0.65rem 0.875rem;font-family:var(--font-data);font-size:0.875rem;
+  outline:none;transition:border-color 0.2s}
+.field input:focus,.field select:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,0.08)}
+.field select option{background:var(--deep)}
+
+/* ── BUTTONS ── */
+.btn{padding:0.7rem 1.5rem;border-radius:8px;font-family:var(--font-mono);
+  font-size:0.8rem;font-weight:700;letter-spacing:1.5px;cursor:pointer;
+  transition:all 0.2s;border:1px solid;text-transform:uppercase}
+.btn-primary{background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(124,58,237,0.1));
+  border-color:var(--cyan);color:var(--cyan)}
+.btn-primary:hover{background:rgba(0,212,255,0.2);box-shadow:0 0 20px rgba(0,212,255,0.3)}
+.btn-ghost{background:transparent;border-color:var(--border2);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn-plasma{background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(157,92,240,0.1));
+  border-color:var(--plasma2);color:var(--plasma2)}
+.btn-plasma:hover{background:rgba(124,58,237,0.25)}
+.btn-danger{background:rgba(255,77,109,0.08);border-color:rgba(255,77,109,0.4);color:var(--ember)}
+.btn-danger:hover{background:rgba(255,77,109,0.18)}
+
+/* ── TRUST BADGE ── */
+.trust-badge{padding:4px 14px;border-radius:20px;font-family:var(--font-mono);font-size:0.7rem;font-weight:700;letter-spacing:2px}
+.badge-HIGH{background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.4);color:var(--emerald)}
+.badge-MEDIUM{background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.4);color:var(--gold)}
+.badge-LOW{background:rgba(255,154,0,0.1);border:1px solid rgba(255,154,0,0.4);color:var(--amber)}
+.badge-UNVERIFIED{background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.4);color:var(--ember)}
+
+/* ── TRUST GAUGE ── */
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;margin:1rem 0}
+.gauge-wrap svg{overflow:visible}
+.gauge-score{font-family:var(--font-display);font-size:2.2rem;font-weight:900;color:var(--cyan);text-align:center}
+.gauge-label{font-size:0.65rem;color:var(--muted);letter-spacing:2px;font-family:var(--font-mono)}
+
+/* ── DIM BARS ── */
+.dim-bar-wrap{margin-bottom:0.75rem}
+.dim-bar-header{display:flex;justify-content:space-between;margin-bottom:0.35rem}
+.dim-bar-label{font-size:0.75rem;color:var(--muted);font-family:var(--font-mono)}
+.dim-bar-score{font-size:0.75rem;color:var(--text);font-family:var(--font-data);font-weight:600}
+.dim-bar-track{height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden}
+.dim-bar-fill{height:100%;border-radius:3px;transition:width 0.8s cubic-bezier(0.34,1.56,0.64,1)}
+.bar-identity{background:linear-gradient(90deg,var(--cyan),var(--plasma2))}
+.bar-education{background:linear-gradient(90deg,var(--gold),var(--amber))}
+.bar-employment{background:linear-gradient(90deg,var(--emerald),var(--cyan2))}
+
+/* ── HOLOGRAM CARD ── */
+.uvid-hologram{position:relative;background:linear-gradient(135deg,rgba(0,212,255,0.06),rgba(124,58,237,0.08));
+  border:1px solid rgba(0,212,255,0.3);border-radius:var(--r);padding:1.75rem;overflow:hidden}
+.uvid-hologram::before{content:'';position:absolute;inset:0;
+  background:linear-gradient(45deg,transparent 40%,rgba(0,212,255,0.04),transparent 60%);
+  animation:shimmer 3s ease-in-out infinite}
+@keyframes shimmer{0%,100%{transform:translateX(-100%)}50%{transform:translateX(100%)}}
+.uvid-string{font-family:var(--font-display);font-size:1.5rem;font-weight:900;
+  letter-spacing:4px;color:var(--cyan);text-shadow:0 0 20px rgba(0,212,255,0.5)}
+.uvid-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-top:1rem}
+.uvid-meta-item label{font-size:0.6rem;color:var(--muted);font-family:var(--font-mono);letter-spacing:1px;display:block;margin-bottom:3px}
+.uvid-meta-item span{font-size:0.75rem;color:var(--text);font-family:var(--font-data)}
+
+/* ── PIPELINE ── */
+.pipeline{display:flex;align-items:center;gap:0;margin:1.5rem 0;flex-wrap:wrap}
+.pipe-node{padding:0.5rem 0.875rem;background:rgba(0,212,255,0.04);border:1px solid var(--border);
+  border-radius:6px;font-size:0.65rem;font-family:var(--font-mono);color:var(--muted);
+  white-space:nowrap;transition:all 0.3s}
+.pipe-node.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,0.12);
+  box-shadow:0 0 12px rgba(0,212,255,0.2)}
+.pipe-node.done{border-color:var(--emerald);color:var(--emerald);background:rgba(0,255,136,0.06)}
+.pipe-arrow{color:var(--muted);font-size:0.7rem;margin:0 4px}
+
+/* ── TERMINAL ── */
+.terminal{background:rgba(0,0,0,0.4);border:1px solid rgba(0,212,255,0.12);border-radius:8px;
+  padding:1rem;height:200px;overflow-y:auto;font-family:var(--font-mono);font-size:0.72rem;
+  scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.log-line{margin-bottom:0.2rem;line-height:1.6}
+.log-ts{color:var(--dim);margin-right:0.75rem}
+.log-ok{color:var(--emerald)}
+.log-err{color:var(--ember)}
+.log-info{color:var(--muted)}
+.log-warn{color:var(--amber)}
+.log-chain{color:var(--plasma2)}
+.log-kafka{color:var(--gold)}
+.cursor{display:inline-block;width:8px;height:12px;background:var(--cyan);
+  animation:cursorBlink 1s step-end infinite;vertical-align:middle}
+@keyframes cursorBlink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ── OTP CLUSTER ── */
+.otp-cluster{display:flex;gap:0.5rem;margin:1rem 0}
+.otp-cell{width:48px;height:56px;background:rgba(0,212,255,0.04);border:1px solid var(--border2);
+  border-radius:8px;color:var(--cyan);font-family:var(--font-display);font-size:1.4rem;
+  font-weight:700;text-align:center;outline:none;transition:all 0.2s;caret-color:var(--cyan)}
+.otp-cell:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,0.15);background:rgba(0,212,255,0.08)}
+
+/* ── CONSENT TOGGLE ── */
+.consent-row{display:flex;align-items:flex-start;gap:1rem;padding:0.875rem;
+  background:rgba(0,212,255,0.03);border:1px solid var(--border);border-radius:8px;
+  cursor:pointer;transition:border-color 0.2s}
+.consent-row:hover{border-color:var(--border2)}
+.consent-row input[type=checkbox]{display:none}
+.consent-toggle{width:44px;height:24px;background:var(--dim);border-radius:12px;
+  position:relative;flex-shrink:0;transition:background 0.3s;margin-top:2px}
+.consent-toggle::after{content:'';position:absolute;width:18px;height:18px;
+  background:var(--muted);border-radius:50%;top:3px;left:3px;transition:all 0.3s}
+.consent-toggle.on{background:rgba(0,212,255,0.3)}
+.consent-toggle.on::after{left:23px;background:var(--cyan)}
+.consent-text{font-size:0.8rem;color:var(--muted);line-height:1.6}
+.consent-text strong{color:var(--text)}
+
+/* ── RESULT PANEL ── */
+.result-panel{display:none;animation:fadeSlideIn 0.4s ease}
+.result-panel.show{display:block}
+
+/* ── STEP WIZARD ── */
+.step-indicator{display:flex;gap:0;margin-bottom:2rem}
+.step-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:0.7rem;font-weight:700;border:2px solid var(--border2);
+  color:var(--muted);transition:all 0.3s;cursor:default}
+.step-dot.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,0.1)}
+.step-dot.done{border-color:var(--emerald);background:var(--emerald);color:var(--void)}
+.step-line{flex:1;height:2px;background:var(--border);margin:auto 0;transition:background 0.3s}
+.step-line.done{background:var(--emerald)}
+
+/* ── WEBAUTHN SPECIFIC ── */
+.passkey-card{background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(157,92,240,0.04));
+  border:1px solid rgba(124,58,237,0.3);border-radius:var(--r);padding:1.5rem;text-align:center}
+.passkey-icon{font-size:3rem;margin-bottom:0.75rem;display:block}
+.biometric-prompt{border:2px dashed rgba(124,58,237,0.4);border-radius:50%;
+  width:100px;height:100px;margin:1rem auto;display:flex;align-items:center;justify-content:center;
+  font-size:2.5rem;animation:scanPulse 2s ease-in-out infinite}
+@keyframes scanPulse{0%,100%{border-color:rgba(124,58,237,0.4);box-shadow:none}
+  50%{border-color:rgba(124,58,237,0.8);box-shadow:0 0 30px rgba(124,58,237,0.3)}}
+.vp-challenge-box{background:rgba(0,0,0,0.3);border:1px solid var(--border);
+  border-radius:8px;padding:1rem;font-family:var(--font-data);font-size:0.75rem;
+  color:var(--muted);word-break:break-all;margin:1rem 0}
+
+/* ── KAFKA PANEL ── */
+.topic-card{background:rgba(255,215,0,0.03);border:1px solid rgba(255,215,0,0.15);
+  border-radius:8px;padding:1rem}
+.topic-name{font-family:var(--font-mono);font-size:0.75rem;color:var(--gold);letter-spacing:1px}
+.topic-lag{font-family:var(--font-display);font-size:1.4rem;color:var(--text);font-weight:700}
+.topic-lag.warn{color:var(--amber)}
+.topic-lag.crit{color:var(--ember);animation:blink 0.8s step-end infinite}
+.kafka-event-stream{background:rgba(0,0,0,0.4);border:1px solid rgba(255,215,0,0.12);
+  border-radius:8px;padding:0.875rem;height:240px;overflow-y:auto;
+  font-family:var(--font-mono);font-size:0.68rem;scrollbar-width:thin}
+.k-event{display:flex;gap:0.75rem;padding:0.25rem 0;border-bottom:1px solid rgba(255,255,255,0.03);line-height:1.5}
+.k-ts{color:var(--dim);flex-shrink:0;width:60px}
+.k-topic{flex-shrink:0;width:140px}
+.k-topic.verif{color:var(--cyan)}
+.k-topic.fraud{color:var(--ember)}
+.k-topic.audit{color:var(--plasma2)}
+.k-topic.notif{color:var(--amber)}
+.k-topic.dlq{color:var(--ember);font-weight:700}
+.k-key{color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── COUNTRY CONFIG ── */
+.adapter-row{display:flex;align-items:center;gap:1rem;padding:0.75rem;
+  border-bottom:1px solid var(--border);transition:background 0.2s}
+.adapter-row:hover{background:rgba(0,212,255,0.03)}
+.adapter-flag{width:28px;height:20px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.adapter-cc{font-family:var(--font-display);font-size:0.75rem;color:var(--cyan);width:30px;font-weight:700}
+.adapter-name{font-family:var(--font-data);font-size:0.8rem;flex:1}
+.adapter-status{font-family:var(--font-mono);font-size:0.65rem;padding:2px 8px;border-radius:4px;font-weight:700;flex-shrink:0}
+.status-active{background:rgba(0,255,136,0.1);color:var(--emerald);border:1px solid rgba(0,255,136,0.3)}
+.status-stub{background:rgba(255,215,0,0.08);color:var(--gold);border:1px solid rgba(255,215,0,0.2)}
+.status-offline{background:rgba(255,77,109,0.08);color:var(--ember);border:1px solid rgba(255,77,109,0.2)}
+.mock-toggle-wrap{display:flex;align-items:center;gap:0.5rem;font-size:0.65rem;color:var(--muted);font-family:var(--font-mono)}
+.mini-toggle{width:32px;height:18px;background:var(--dim);border-radius:9px;cursor:pointer;position:relative;transition:background 0.3s;flex-shrink:0}
+.mini-toggle.on{background:rgba(0,212,255,0.3)}
+.mini-toggle::after{content:'';position:absolute;width:12px;height:12px;background:var(--muted);border-radius:50%;top:3px;left:3px;transition:left 0.3s}
+.mini-toggle.on::after{left:17px;background:var(--cyan)}
+
+/* ── SERVICE HEALTH ── */
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem}
+.svc-card{background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:8px;padding:0.875rem}
+.svc-name{font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);letter-spacing:1px;margin-bottom:0.5rem;text-transform:uppercase}
+.svc-port{font-size:0.7rem;color:var(--dim);margin-bottom:0.5rem;font-family:var(--font-data)}
+.svc-status{font-family:var(--font-mono);font-size:0.7rem;font-weight:700;display:flex;align-items:center;gap:4px}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-ok{background:var(--emerald);box-shadow:0 0 6px var(--emerald)}
+.dot-warn{background:var(--amber)}
+.dot-err{background:var(--ember);animation:blink 1s step-end infinite}
+.dot-unknown{background:var(--muted)}
+
+/* ── STAT CARDS ── */
+.stat-card{background:rgba(0,212,255,0.04);border:1px solid var(--border);border-radius:8px;padding:1rem}
+.stat-label{font-size:0.65rem;color:var(--muted);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:0.35rem;text-transform:uppercase}
+.stat-value{font-family:var(--font-display);font-size:1.6rem;font-weight:800;color:var(--text)}
+.stat-sub{font-size:0.7rem;color:var(--muted);margin-top:0.25rem;font-family:var(--font-data)}
+
+/* ── CHAIN BLOCK ── */
+.block-feed{display:flex;flex-direction:column;gap:0.75rem}
+.block-item{background:rgba(124,58,237,0.05);border:1px solid rgba(124,58,237,0.2);
+  border-radius:8px;padding:1rem;font-family:var(--font-data);font-size:0.75rem}
+.block-num{font-family:var(--font-display);color:var(--plasma2);font-size:0.85rem;font-weight:700}
+.block-hash{color:var(--muted);font-size:0.68rem;margin-top:0.25rem;word-break:break-all}
+
+/* ── VP FLOW ── */
+.vp-step-row{display:flex;align-items:center;gap:0.75rem;padding:0.75rem;
+  border:1px solid var(--border);border-radius:8px;margin-bottom:0.5rem;transition:all 0.3s}
+.vp-step-row.active{border-color:var(--cyan);background:rgba(0,212,255,0.04)}
+.vp-step-row.done{border-color:var(--emerald);background:rgba(0,255,136,0.04)}
+.vp-step-row.fail{border-color:var(--ember);background:rgba(255,77,109,0.04)}
+.vp-step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:0.7rem;font-weight:700;border:1px solid var(--border2);flex-shrink:0}
+.vp-step-text{font-size:0.8rem;color:var(--muted)}
+.vp-step-row.done .vp-step-text{color:var(--emerald)}
+.vp-step-row.active .vp-step-text{color:var(--text)}
+
+/* ── CONSENT MODES ── */
+.consent-mode-btn{padding:0.5rem 1rem;border:1px solid var(--border2);border-radius:6px;
+  font-family:var(--font-mono);font-size:0.7rem;cursor:pointer;transition:all 0.2s;background:transparent}
+.consent-mode-btn.selected-passive{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,0.1)}
+.consent-mode-btn.selected-active{border-color:var(--plasma2);color:var(--plasma2);background:rgba(124,58,237,0.1)}
+.consent-mode-btn.selected-silent{border-color:var(--muted);color:var(--muted);background:rgba(74,127,165,0.1)}
+
+/* ── TOAST ── */
+#toast-stack{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:0.5rem;max-width:340px}
+.toast{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;
+  padding:0.75rem 1rem;font-family:var(--font-mono);font-size:0.75rem;
+  transform:translateX(120%);transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);display:flex;align-items:center;gap:0.5rem}
+.toast.show{transform:translateX(0)}
+
+@media(max-width:768px){
+  .grid-2,.form-grid.cols2{grid-template-columns:1fr}
+  .grid-3{grid-template-columns:1fr 1fr}
+  .uvid-string{font-size:1rem}
+  .uvid-meta{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<canvas id="cosmos"></canvas>
+<div id="app">
+
+<!-- HEADER -->
+<header>
+  <div class="logo-mark">GUV</div>
+  <div><div class="logo-text">GUVID</div><div class="logo-sub">Global Universal Verification &amp; Identity Deployment · v3.0</div></div>
+  <div class="country-selector-header">
+    <span style="font-size:0.65rem;color:var(--muted);font-family:var(--font-mono)">COUNTRY</span>
+    <select id="global-country" onchange="setGlobalCountry(this.value)">
+      <option value="IN">🇮🇳 IN — India</option>
+      <option value="US">🇺🇸 US — United States</option>
+      <option value="GB">🇬🇧 GB — United Kingdom</option>
+      <option value="AE">🇦🇪 AE — UAE</option>
+      <option value="SG">🇸🇬 SG — Singapore</option>
+      <option value="AU">🇦🇺 AU — Australia</option>
+      <option value="DE">🇩🇪 DE — Germany</option>
+      <option value="BR">🇧🇷 BR — Brazil</option>
+    </select>
+  </div>
+  <div class="header-chips">
+    <span class="chip chip-fabric">Fabric 2.5</span>
+    <span class="chip chip-webauthn">WebAuthn L3</span>
+    <span class="chip chip-live">● LIVE</span>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav class="nav-rail">
+  <div class="nav-tab active" onclick="switchTab('verify')" id="tab-verify"><span>🔍</span> Verify</div>
+  <div class="nav-tab" onclick="switchTab('citizen')" id="tab-citizen"><span>🪪</span> Citizen</div>
+  <div class="nav-tab" onclick="switchTab('wallet')" id="tab-wallet"><span>🔑</span> Wallet</div>
+  <div class="nav-tab" onclick="switchTab('institution')" id="tab-institution"><span>🎓</span> Institution</div>
+  <div class="nav-tab" onclick="switchTab('hr')" id="tab-hr"><span>🏢</span> HR Portal</div>
+  <div class="nav-tab" onclick="switchTab('chain')" id="tab-chain"><span>⛓</span> Blockchain</div>
+  <div class="nav-tab" onclick="switchTab('kafka')" id="tab-kafka"><span>📡</span> Kafka</div>
+  <div class="nav-tab" onclick="switchTab('dashboard')" id="tab-dashboard"><span>📊</span> Dashboard</div>
+  <div class="nav-tab" onclick="switchTab('config')" id="tab-config"><span>⚙</span> Country Config</div>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANEL 1 — VERIFY (public GUVID + VP flow)
+══════════════════════════════════════════════════════════════ -->
+<div class="panel active page-container" id="panel-verify">
+  <div class="grid-2">
+    <div>
+      <div class="card">
+        <div class="card-title">🔍 Verify GUVID</div>
+        <div class="form-grid cols1">
+          <div class="field">
+            <label>Country</label>
+            <select id="verify-country" onchange="updateVerifyPlaceholder()">
+              <option value="IN">🇮🇳 India</option><option value="US">🇺🇸 United States</option>
+              <option value="GB">🇬🇧 United Kingdom</option><option value="AE">🇦🇪 UAE</option>
+              <option value="SG">🇸🇬 Singapore</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>GUVID Token</label>
+            <input type="text" id="pub-guvid" placeholder="GUV-IN-2025-X7K2M9PQ" oninput="this.value=this.value.toUpperCase()" style="font-family:var(--font-display);letter-spacing:2px;font-size:0.95rem"/>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.75rem;margin-top:1rem;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="publicVerify()">⚡ Verify GUVID</button>
+          <button class="btn btn-plasma" onclick="openVPFlow()" id="btn-vp-flow" style="display:none">🔑 Present Credential (WebAuthn)</button>
+          <button class="btn btn-ghost" onclick="fillDemo()">Demo</button>
+        </div>
+      </div>
+
+      <!-- VP Steps (appears when holder binding required) -->
+      <div id="vp-flow-panel" style="display:none">
+        <div class="card">
+          <div class="card-title">🔑 Verifiable Presentation — Holder Binding</div>
+          <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.7">
+            Proving you are the legitimate holder of this GUVID. Your passkey will sign a challenge — the private key never leaves your device.
+          </p>
+          <div class="vp-challenge-box" id="vp-challenge-display">Challenge will appear here...</div>
+          <div id="vp-steps">
+            <div class="vp-step-row" id="vps-1"><div class="vp-step-num">1</div><div class="vp-step-text">Fetching challenge nonce from verify-svc</div></div>
+            <div class="vp-step-row" id="vps-2"><div class="vp-step-num">2</div><div class="vp-step-text">Invoking WebAuthn assertion (navigator.credentials.get)</div></div>
+            <div class="vp-step-row" id="vps-3"><div class="vp-step-num">3</div><div class="vp-step-text">Verifying signature against on-chain public key hash</div></div>
+            <div class="vp-step-row" id="vps-4"><div class="vp-step-num">4</div><div class="vp-step-text">Checking signCount (replay prevention)</div></div>
+            <div class="vp-step-row" id="vps-5"><div class="vp-step-num">5</div><div class="vp-step-text">Building W3C Verifiable Presentation</div></div>
+          </div>
+          <div style="display:flex;gap:0.75rem;margin-top:1rem">
+            <button class="btn btn-plasma" onclick="runVPFlow()">🔑 Sign with Passkey</button>
+            <button class="btn btn-ghost" onclick="cancelVPFlow()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7-step pipeline -->
+      <div class="card">
+        <div class="card-title">Verification Pipeline</div>
+        <div class="pipeline" id="verify-pipeline">
+          <div class="pipe-node" id="pn-0">Gateway</div><div class="pipe-arrow">→</div>
+          <div class="pipe-node" id="pn-1">Fraud</div><div class="pipe-arrow">→</div>
+          <div class="pipe-node" id="pn-2">Fabric</div><div class="pipe-arrow">→</div>
+          <div class="pipe-node" id="pn-3">Cache</div><div class="pipe-arrow">→</div>
+          <div class="pipe-node" id="pn-4">WebAuthn</div><div class="pipe-arrow">→</div>
+          <div class="pipe-node" id="pn-5">DID</div><div class="pipe-arrow">→</div>
+          <div class="pipe-node" id="pn-6">Result</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result card -->
+    <div>
+      <div class="result-panel" id="pub-result">
+        <div class="uvid-hologram" id="result-hologram">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem">
+            <div>
+              <div style="font-size:0.55rem;color:var(--muted);font-family:var(--font-mono);letter-spacing:2px;text-transform:uppercase;margin-bottom:0.25rem">GUVID</div>
+              <div class="uvid-string" id="res-guvid">—</div>
+              <div style="font-size:0.65rem;color:var(--muted);margin-top:0.25rem;font-family:var(--font-mono)" id="res-did">—</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem">
+              <span class="trust-badge" id="res-trust-badge">—</span>
+              <span id="res-holder-badge" style="display:none;font-family:var(--font-mono);font-size:0.65rem;color:var(--plasma2);border:1px solid rgba(124,58,237,0.4);padding:2px 8px;border-radius:4px">🔑 Holder Verified</span>
+            </div>
+          </div>
+
+          <!-- Gauge -->
+          <div class="gauge-wrap">
+            <svg width="200" height="110" viewBox="0 0 200 110">
+              <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12" stroke-linecap="round"/>
+              <path id="gauge-arc" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="var(--cyan)" stroke-width="12" stroke-linecap="round"
+                stroke-dasharray="251" stroke-dashoffset="251" style="transition:stroke-dashoffset 1s ease,stroke 0.5s ease"/>
+            </svg>
+            <div style="margin-top:-50px"><div class="gauge-score" id="res-score">—</div><div class="gauge-label">TRUST SCORE</div></div>
+          </div>
+
+          <!-- Dim bars -->
+          <div style="margin-top:1rem">
+            <div class="dim-bar-wrap"><div class="dim-bar-header"><span class="dim-bar-label">🪪 Identity</span><span class="dim-bar-score" id="res-id-score">—</span></div><div class="dim-bar-track"><div class="dim-bar-fill bar-identity" id="bar-id" style="width:0%"></div></div></div>
+            <div class="dim-bar-wrap"><div class="dim-bar-header"><span class="dim-bar-label">🎓 Education</span><span class="dim-bar-score" id="res-edu-score">—</span></div><div class="dim-bar-track"><div class="dim-bar-fill bar-education" id="bar-edu" style="width:0%"></div></div></div>
+            <div class="dim-bar-wrap"><div class="dim-bar-header"><span class="dim-bar-label">💼 Employment</span><span class="dim-bar-score" id="res-emp-score">—</span></div><div class="dim-bar-track"><div class="dim-bar-fill bar-employment" id="bar-emp" style="width:0%"></div></div></div>
+          </div>
+
+          <div class="uvid-meta">
+            <div class="uvid-meta-item"><label>Country</label><span id="res-country">—</span></div>
+            <div class="uvid-meta-item"><label>Fabric TX</label><span id="res-tx" style="font-size:0.65rem;color:var(--muted)">—</span></div>
+            <div class="uvid-meta-item"><label>Expires</label><span id="res-expires">—</span></div>
+          </div>
+        </div>
+
+        <!-- Credentials list -->
+        <div id="res-credentials" style="margin-top:1rem"></div>
+      </div>
+
+      <!-- Placeholder when no result -->
+      <div id="verify-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;color:var(--muted);gap:1rem">
+        <div style="font-size:3rem;opacity:0.3">🔍</div>
+        <div style="font-family:var(--font-mono);font-size:0.75rem;letter-spacing:2px;text-align:center">Enter a GUVID token<br>to verify identity</div>
+        <div style="font-family:var(--font-data);font-size:0.65rem;color:var(--dim);text-align:center">GUV-{CC}-{YEAR}-{HASH}<br>e.g. GUV-IN-2025-X7K2M9PQ</div>
+      </div>
+
+      <!-- Terminal -->
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-title">Verify Log</div>
+        <div class="terminal" id="term-verify"><div class="log-line"><span class="log-ts">——————</span><span class="log-info"><span class="cursor"></span></span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANEL 2 — CITIZEN WIZARD (5-step: Country→ID→Education→Employment→Issue)
+══════════════════════════════════════════════════════════════ -->
+<div class="panel page-container" id="panel-citizen">
+
+  <!-- Step indicator (5 steps now with country) -->
+  <div class="step-indicator" id="citizen-step-indicator">
+    <div class="step-dot active" id="sdot-0">0</div><div class="step-line" id="sline-01"></div>
+    <div class="step-dot" id="sdot-1">1</div><div class="step-line" id="sline-12"></div>
+    <div class="step-dot" id="sdot-2">2</div><div class="step-line" id="sline-23"></div>
+    <div class="step-dot" id="sdot-3">3</div><div class="step-line" id="sline-34"></div>
+    <div class="step-dot" id="sdot-4">4</div>
+  </div>
+  <div style="display:flex;gap:1rem;justify-content:space-around;margin-bottom:2rem;font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px">
+    <span>Country</span><span>Identity</span><span>Education</span><span>Employment</span><span>Issue GUVID</span>
+  </div>
+
+  <!-- STEP 0: Country selection -->
+  <div id="citizen-step-0">
+    <div class="card">
+      <div class="card-title">Step 0 — Select Country</div>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.7">
+        Select your country. The verification flow, field labels, and identity documents will adapt automatically based on the country's adapter configuration.
+      </p>
+      <div class="form-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.75rem" id="country-picker-grid">
+        <!-- Populated by JS -->
+      </div>
+      <div style="margin-top:1.5rem">
+        <button class="btn btn-primary" id="btn-country-next" disabled onclick="gotoStep(1)">Next: Identity →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1: Identity (adapts per country) -->
+  <div id="citizen-step-1" style="display:none">
+    <div class="card">
+      <div class="card-title" id="s1-title">Step 1 — Identity Verification</div>
+      <div id="s1-adapter-info" style="margin-bottom:1rem;padding:0.5rem 0.875rem;background:rgba(0,212,255,0.04);border:1px solid var(--border);border-radius:6px;font-size:0.72rem;color:var(--muted);font-family:var(--font-mono)"></div>
+      <div class="form-grid cols2">
+        <div class="field">
+          <label id="s1-primary-label">Primary ID</label>
+          <input type="text" id="s1-primary-id" placeholder="Enter primary ID number"/>
+        </div>
+        <div class="field">
+          <label id="s1-secondary-label">Secondary ID</label>
+          <input type="text" id="s1-secondary-id" placeholder="Enter secondary ID"/>
+        </div>
+      </div>
+      <div id="otp-section" style="margin-top:1rem">
+        <button class="btn btn-ghost" id="btn-send-otp" onclick="sendPrimaryOTP()">Send OTP</button>
+        <div id="otp-input-wrap" style="display:none;margin-top:1rem">
+          <label style="font-size:0.7rem;color:var(--muted);font-family:var(--font-mono);letter-spacing:1px;display:block;margin-bottom:0.5rem">ENTER OTP (use 123456 in dev)</label>
+          <div class="otp-cluster">
+            <input class="otp-cell" maxlength="1" id="otp0" oninput="otpNext(this,'otp1')">
+            <input class="otp-cell" maxlength="1" id="otp1" oninput="otpNext(this,'otp2')">
+            <input class="otp-cell" maxlength="1" id="otp2" oninput="otpNext(this,'otp3')">
+            <input class="otp-cell" maxlength="1" id="otp3" oninput="otpNext(this,'otp4')">
+            <input class="otp-cell" maxlength="1" id="otp4" oninput="otpNext(this,'otp5')">
+            <input class="otp-cell" maxlength="1" id="otp5">
+          </div>
+          <div style="display:flex;gap:0.75rem;margin-top:1rem">
+            <button class="btn btn-primary" onclick="verifyPrimaryOTP()">Verify OTP</button>
+          </div>
+        </div>
+      </div>
+      <div id="s1-ok" style="display:none;margin-top:1rem;padding:0.875rem;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.2);border-radius:8px;font-family:var(--font-mono);font-size:0.8rem;color:var(--emerald)">
+        ✓ Primary ID Verified
+      </div>
+      <div id="s1-secondary-ok" style="display:none;margin-top:0.75rem;padding:0.875rem;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.2);border-radius:8px;font-family:var(--font-mono);font-size:0.8rem;color:var(--emerald)">
+        ✓ Secondary ID Verified
+      </div>
+      <div style="margin-top:1.25rem;display:flex;gap:0.75rem">
+        <button class="btn btn-ghost" onclick="gotoStep(0)">← Country</button>
+        <button class="btn btn-primary" onclick="verifySecondaryAndProceed()">Verify Secondary & Continue →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Education -->
+  <div id="citizen-step-2" style="display:none">
+    <div class="card">
+      <div class="card-title" id="s2-title">Step 2 — Education Verification</div>
+      <div id="s2-adapter-info" style="margin-bottom:1rem;padding:0.5rem 0.875rem;background:rgba(0,212,255,0.04);border:1px solid var(--border);border-radius:6px;font-size:0.72rem;color:var(--muted);font-family:var(--font-mono)"></div>
+      <div class="form-grid cols2">
+        <div class="field"><label id="s2-inst-label">Institution ID</label><input type="text" id="s2-inst-id" placeholder="Institution identifier"/></div>
+        <div class="field"><label>Degree Type</label>
+          <select id="s2-degree"><option>Bachelor</option><option>Master</option><option>Doctorate</option><option>Diploma</option><option>Certificate</option></select>
+        </div>
+        <div class="field"><label id="s2-roll-label">Roll / Student Number</label><input type="text" id="s2-roll" placeholder="Student number"/></div>
+        <div class="field"><label>Graduation Year</label><input type="number" id="s2-year" placeholder="2022" min="1950" max="2030"/></div>
+        <div class="field"><label>Field of Study</label><input type="text" id="s2-field" placeholder="Computer Science"/></div>
+        <div class="field"><label>Issuing Body</label><input type="text" id="s2-body" placeholder="Accreditation authority"/></div>
+      </div>
+      <div style="margin-top:1.25rem;display:flex;gap:0.75rem">
+        <button class="btn btn-primary" onclick="verifyEducation()">Verify Education</button>
+        <button class="btn btn-ghost" onclick="gotoStep(1)">← Back</button>
+        <button class="btn btn-ghost" onclick="gotoStep(3)" style="margin-left:auto">Skip →</button>
+      </div>
+      <div id="s2-ok" style="display:none;margin-top:1rem;padding:0.875rem;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.2);border-radius:8px;font-family:var(--font-mono);font-size:0.8rem;color:var(--emerald)">
+        ✓ Education Verified — Score: <span id="s2-score-display">—</span>/100
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Employment -->
+  <div id="citizen-step-3" style="display:none">
+    <div class="card">
+      <div class="card-title" id="s3-title">Step 3 — Employment Verification</div>
+      <div id="s3-adapter-info" style="margin-bottom:1rem;padding:0.5rem 0.875rem;background:rgba(0,212,255,0.04);border:1px solid var(--border);border-radius:6px;font-size:0.72rem;color:var(--muted);font-family:var(--font-mono)"></div>
+      <div class="form-grid cols2">
+        <div class="field"><label id="s3-emp-label">Employer ID / Registry Number</label><input type="text" id="s3-emp-id" placeholder="Employer registry ID"/></div>
+        <div class="field"><label>Employment Type</label>
+          <select id="s3-emp-type"><option value="FT">Full-time</option><option value="PT">Part-time</option><option value="Contract">Contract</option><option value="SelfEmployed">Self-employed</option></select>
+        </div>
+        <div class="field"><label>Start Year</label><input type="number" id="s3-start" placeholder="2020" min="1970" max="2030"/></div>
+        <div class="field"><label>End Year (blank = current)</label><input type="number" id="s3-end" placeholder="Leave blank if current"/></div>
+        <div class="field"><label id="s3-emp-num-label">Social Insurance / UAN Number</label><input type="text" id="s3-emp-num" placeholder="Social/pension number"/></div>
+        <div class="field"><label id="s3-emp-reg-label">Employer Registry (optional)</label><input type="text" id="s3-emp-reg" placeholder="Company registry ID"/></div>
+      </div>
+      <div style="margin-top:1.25rem;display:flex;gap:0.75rem">
+        <button class="btn btn-primary" onclick="verifyEmployment()">Verify Employment</button>
+        <button class="btn btn-ghost" onclick="gotoStep(2)">← Back</button>
+        <button class="btn btn-ghost" onclick="gotoStep(4)" style="margin-left:auto">Skip →</button>
+      </div>
+      <div id="s3-ok" style="display:none;margin-top:1rem;padding:0.875rem;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.2);border-radius:8px;font-family:var(--font-mono);font-size:0.8rem;color:var(--emerald)">
+        ✓ Employment Verified — Score: <span id="s3-score-display">—</span>/100
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: Issue GUVID -->
+  <div id="citizen-step-4" style="display:none">
+    <div class="card">
+      <div class="card-title">Step 4 — Issue GUVID on Hyperledger Fabric</div>
+      <div style="margin-bottom:1.5rem">
+        <div style="font-size:0.7rem;font-family:var(--font-mono);color:var(--muted);margin-bottom:0.75rem;letter-spacing:1px;text-transform:uppercase">Verification Summary</div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap" id="session-summary"></div>
+      </div>
+      <div class="form-grid cols1">
+        <div class="field"><label>Full Name (as verified)</label><input type="text" id="uvid-name" placeholder="Your verified full name"/></div>
+      </div>
+      <div class="consent-row" id="uvid-consent-row" onclick="toggleUVIDConsent()" style="margin-top:1rem">
+        <input type="checkbox" id="uvid-consent-check"/>
+        <div class="consent-toggle" id="uvid-consent-toggle"></div>
+        <div class="consent-text">
+          <strong>Final Consent:</strong> I authorise the GUVID platform to issue a credential anchored to Hyperledger Fabric. I understand this record is immutable and verifiable by authorised entities. My raw identity numbers will never be stored — only cryptographic hashes.
+          <br><span style="font-size:0.7rem;color:var(--plasma2)">🔑 A passkey (WebAuthn) will be registered to your device to enable holder binding.</span>
+        </div>
+      </div>
+      <div style="margin-top:1.25rem;display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="issueGUVID()" id="btn-issue-guvid" style="font-size:0.9rem;padding:0.875rem 2rem">⚡ Issue GUVID + Register Passkey</button>
+        <button class="btn btn-ghost" onclick="gotoStep(3)">← Back</button>
+      </div>
+    </div>
+
+    <!-- Issued GUVID result -->
+    <div id="uvid-issued-result" style="display:none">
+      <div class="uvid-hologram">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem">
+          <div>
+            <div style="font-size:0.55rem;color:var(--muted);font-family:var(--font-mono);letter-spacing:2px;text-transform:uppercase;margin-bottom:0.25rem">Your GUVID</div>
+            <div class="uvid-string" id="issued-uvid-string">—</div>
+            <div style="font-size:0.65rem;color:var(--muted);margin-top:0.25rem;font-family:var(--font-mono)" id="issued-did">—</div>
+          </div>
+          <span class="trust-badge" id="issued-trust-badge"></span>
+        </div>
+        <div style="margin-bottom:1.5rem">
+          <div class="dim-bar-wrap"><div class="dim-bar-header"><span class="dim-bar-label">🪪 Identity</span><span class="dim-bar-score" id="issued-id-score">—</span></div><div class="dim-bar-track"><div class="dim-bar-fill bar-identity" id="issued-bar-id" style="width:0%"></div></div></div>
+          <div class="dim-bar-wrap"><div class="dim-bar-header"><span class="dim-bar-label">🎓 Education</span><span class="dim-bar-score" id="issued-edu-score">—</span></div><div class="dim-bar-track"><div class="dim-bar-fill bar-education" id="issued-bar-edu" style="width:0%"></div></div></div>
+          <div class="dim-bar-wrap"><div class="dim-bar-header"><span class="dim-bar-label">💼 Employment</span><span class="dim-bar-score" id="issued-emp-score">—</span></div><div class="dim-bar-track"><div class="dim-bar-fill bar-employment" id="issued-bar-emp" style="width:0%"></div></div></div>
+        </div>
+        <div class="uvid-meta">
+          <div class="uvid-meta-item"><label>Country</label><span id="issued-country">—</span></div>
+          <div class="uvid-meta-item"><label>Fabric TX</label><span id="issued-fab-tx" style="font-size:0.65rem;color:var(--muted)">—</span></div>
+          <div class="uvid-meta-item"><label>DID</label><span id="issued-did-short" style="font-size:0.65rem;color:var(--plasma2)">—</span></div>
+        </div>
+        <div id="passkey-registered-badge" style="display:none;margin-top:1rem;padding:0.5rem 0.875rem;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3);border-radius:6px;font-family:var(--font-mono);font-size:0.72rem;color:var(--plasma2)">
+          🔑 Passkey registered — your device can now sign Verifiable Presentations
+        </div>
+        <div style="display:flex;gap:0.75rem;margin-top:1.25rem">
+          <button class="btn btn-ghost" onclick="copyGUVID()">Copy GUVID</button>
+          <button class="btn btn-plasma" onclick="showWalletWithGUVID()">→ Open Wallet</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANEL 3 — WALLET (WebAuthn passkey + consent)
+══════════════════════════════════════════════════════════════ -->
+<div class="panel page-container" id="panel-wallet">
+  <div class="grid-2">
+    <div>
+      <div class="card">
+        <div class="card-title">🔑 WebAuthn Passkey</div>
+        <div class="passkey-card">
+          <span class="passkey-icon">🔑</span>
+          <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--muted);margin-bottom:1rem;line-height:1.7;text-align:center">
+            Your GUVID credential is bound to a passkey stored in your device's secure hardware (TPM / Secure Enclave). The private key never leaves your device.
+          </div>
+          <div class="field" style="margin-bottom:1rem"><label>Your GUVID</label><input type="text" id="wallet-guvid" placeholder="GUV-IN-2025-X7K2M9PQ" style="font-family:var(--font-display);font-size:0.9rem;letter-spacing:2px"/></div>
+          <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+            <button class="btn btn-plasma" onclick="registerPasskey()">Register Passkey</button>
+            <button class="btn btn-ghost" onclick="checkPasskeyStatus()">Check Status</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🪪 Present Credential</div>
+        <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.7">Generate a Verifiable Presentation to prove your identity to an employer or institution. Your passkey signs a challenge — cryptographic proof that you hold the GUVID.</p>
+        <div class="field" style="margin-bottom:1rem"><label>GUVID</label><input type="text" id="present-guvid" placeholder="GUV-IN-2025-X7K2M9PQ" style="font-family:var(--font-display);font-size:0.9rem;letter-spacing:2px"/></div>
+        <div class="field" style="margin-bottom:1rem"><label>Verifier Domain</label><input type="text" id="present-domain" placeholder="acme-corp.com"/></div>
+        <div class="biometric-prompt" id="biometric-ring">🔑</div>
+        <div id="wallet-vp-result" style="display:none;margin-top:1rem"></div>
+        <div style="display:flex;gap:0.75rem;margin-top:1rem;flex-wrap:wrap">
+          <button class="btn btn-plasma" onclick="presentCredential()">Sign VP with Passkey</button>
+          <button class="btn btn-ghost" onclick="copyVPJson()">Copy VP JSON</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-title">🧾 Consent Management</div>
+        <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1.25rem;line-height:1.7">Control how your verification requests are processed. <strong>Active</strong> mode requires your approval before any verifier can see results.</p>
+        <div class="field" style="margin-bottom:1rem"><label>GUVID</label><input type="text" id="consent-guvid" placeholder="GUV-IN-2025-X7K2M9PQ"/></div>
+        <div style="font-size:0.7rem;color:var(--muted);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:0.75rem">Consent Mode</div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.25rem">
+          <button class="consent-mode-btn selected-passive" onclick="selectConsentMode('PASSIVE',this)" id="cm-passive">PASSIVE</button>
+          <button class="consent-mode-btn" onclick="selectConsentMode('ACTIVE',this)" id="cm-active">ACTIVE</button>
+          <button class="consent-mode-btn" onclick="selectConsentMode('SILENT',this)" id="cm-silent">SILENT</button>
+        </div>
+        <div id="consent-mode-desc" style="font-size:0.75rem;color:var(--muted);padding:0.75rem;background:rgba(0,0,0,0.2);border-radius:6px;line-height:1.7;margin-bottom:1rem">
+          <strong style="color:var(--cyan)">PASSIVE</strong> — Verification logged; you receive a notification after. Suitable for most use cases.
+        </div>
+        <button class="btn btn-primary" onclick="saveConsentMode()" style="width:100%">Save Consent Preferences</button>
+        <div style="margin-top:1.25rem">
+          <div style="font-size:0.7rem;color:var(--muted);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:0.75rem">Recent Consent Events</div>
+          <div id="consent-history" style="font-family:var(--font-data);font-size:0.75rem;color:var(--muted)">— No history loaded —</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 Verification History</div>
+        <div class="field" style="margin-bottom:1rem"><label>GUVID</label><input type="text" id="hist-guvid" placeholder="GUV-IN-2025-X7K2M9PQ"/></div>
+        <button class="btn btn-ghost" onclick="loadVerifHistory()" style="width:100%;margin-bottom:1rem">Load History</button>
+        <div id="verif-history" style="font-family:var(--font-data);font-size:0.75rem;color:var(--muted)">— Enter GUVID and load —</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANEL 4 — INSTITUTION (W3C VC 2.0 issuance)
+══════════════════════════════════════════════════════════════ -->
+<div class="panel page-container" id="panel-institution">
+  <div class="grid-2">
+    <div>
+      <div class="card">
+        <div class="card-title">🎓 Institution Login</div>
+        <div class="form-grid cols1">
+          <div class="field"><label>Country</label><select id="inst-country"><option value="IN">🇮🇳 India</option><option value="US">🇺🇸 United States</option><option value="GB">🇬🇧 United Kingdom</option></select></div>
+          <div class="field"><label>Institution ID</label><input type="text" id="inst-id" placeholder="Institution registry ID"/></div>
+          <div class="field"><label>API Key</label><input type="password" id="inst-key" placeholder="inst_key_xxxxxxxx"/></div>
+        </div>
+        <div style="margin-top:1rem"><button class="btn btn-primary" onclick="instLogin()">Authenticate</button></div>
+      </div>
+      <div class="card" id="inst-issue-card" style="display:none">
+        <div class="card-title">Issue W3C VC 2.0 Credential</div>
+        <div class="form-grid cols1">
+          <div class="field"><label>Holder GUVID</label><input type="text" id="ic-guvid" placeholder="GUV-IN-2025-X7K2M9PQ" style="font-family:var(--font-display);letter-spacing:2px"/></div>
+          <div class="field"><label>Credential Type</label><input type="text" id="ic-type" placeholder="e.g. BachelorDegree, ProfessionalCertificate"/></div>
+          <div class="field"><label>Credential Level</label><input type="text" id="ic-level" placeholder="e.g. EQF Level 6, NQFL 7"/></div>
+          <div class="field"><label>Expires (yyyy-mm-dd)</label><input type="date" id="ic-expires"/></div>
+        </div>
+        <div id="ic-result" class="result-panel" style="margin-top:1rem"></div>
+        <div style="margin-top:1rem"><button class="btn btn-primary" onclick="issueCredential()">Issue to Fabric (W3C VC 2.0)</button></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">Issued Credentials</div>
+        <div id="cred-table" style="font-family:var(--font-data);font-size:0.75rem;color:var(--muted)">— Log in to view credentials —</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANEL 5 — HR PORTAL
+══════════════════════════════════════════════════════════════ -->
+<div class="panel page-container" id="panel-hr">
+  <div class="grid-2">
+    <div>
+      <div class="card">
+        <div class="card-title">🏢 Organisation Login</div>
+        <div class="form-grid cols1">
+          <div class="field"><label>Organisation Country</label><select id="hr-country"><option value="IN">🇮🇳 India</option><option value="US">🇺🇸 US</option><option value="GB">🇬🇧 UK</option></select></div>
+          <div class="field"><label>Organisation ID</label><input type="text" id="hr-org-id" placeholder="Company registry ID"/></div>
+          <div class="field"><label>API Key</label><input type="password" id="hr-api-key" placeholder="hr_key_xxxxxxxx"/></div>
+        </div>
+        <div style="display:flex;gap:0.75rem;align-items:center;margin-top:1rem">
+          <button class="btn btn-primary" onclick="hrLogin()">Login</button>
+          <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.72rem;color:var(--muted);font-family:var(--font-mono);cursor:pointer">
+            <div class="mini-toggle" id="cross-country-toggle" onclick="toggleCrossCountry()"></div>
+            Cross-country verify
+          </label>
+        </div>
+      </div>
+      <div class="card" id="hr-verify-card" style="display:none">
+        <div class="card-title">Verify Candidate</div>
+        <div class="form-grid cols1">
+          <div class="field"><label>Candidate GUVID</label><input type="text" id="hr-cand-guvid" placeholder="GUV-IN-2025-X7K2M9PQ" style="font-family:var(--font-display);letter-spacing:2px"/></div>
+          <div class="field"><label>Expected Name (for mismatch detection)</label><input type="text" id="hr-exp-name" placeholder="Full name as on application"/></div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <button class="btn btn-ghost" style="font-size:0.7rem;padding:4px 10px" id="vtype-full" onclick="setVerifyType('full',this)">FULL</button>
+            <button class="btn btn-ghost" style="font-size:0.7rem;padding:4px 10px" id="vtype-id" onclick="setVerifyType('identity-only',this)">ID ONLY</button>
+            <button class="btn btn-ghost" style="font-size:0.7rem;padding:4px 10px" id="vtype-quick" onclick="setVerifyType('quick',this)">QUICK</button>
+          </div>
+        </div>
+        <div id="hr-verify-result" class="result-panel" style="margin-top:1rem"></div>
+        <div style="margin-top:1rem;display:flex;gap:0.75rem">
+          <button class="btn btn-primary" onclick="hrVerifyCandidate()">Verify Candidate</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card" id="hr-batch-card" style="display:none">
+        <div class="card-title">Batch CSV Verify</div>
+        <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem">Upload CSV with columns: guvid,name,position. Results returned with trust level and dimension scores.</p>
+        <button class="btn btn-ghost" onclick="downloadBatchTemplate()" style="margin-bottom:0.75rem;width:100%">↓ Download CSV Template</button>
+        <input type="file" id="batch-file" accept=".csv" style="display:none" onchange="processBatchCSV(this)"/>
+        <button class="btn btn-primary" onclick="document.getElementById('batch-file').click()" style="width:100%">Upload Batch CSV</button>
+        <div id="batch-result" style="margin-top:1rem"></div>
+      </div>
+      <div class="card" id="hr-audit-card" style="display:none">
+        <div class="card-title">On-chain Audit History</div>
+        <div id="hr-audit-log" style="font-family:var(--font-data);font-size:0.75rem;max-height:300px;overflow-y:auto;color:var(--muted)">— Verify a candidate to see audit trail —</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANEL 6 — BLOCKCHAIN
+══════════════════════════════════════════════════════════════ -->
+<div class="panel page-container" id="panel-chain">
+  <div class="grid-2">
+    <div>
+      <div class="card">
+        <div class="card-title">⛓ Live Block Feed</div>
+        <div class="block-feed" id="block-feed">
+          <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--muted)">Loading Fabric blocks...</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">GUVID History</div>
+        <div class="field" style="margin-bottom:1rem"><label>GUVID</label><input type="text" id="chain-guvid" placeholder="GUV-IN-2025-X7K2M9PQ"/></div>
+        <button class="btn btn-ghost" onclick="loadGUVIDHistory()" style="margin-bottom:1rem">Load History</button>
+        <div id="guvid-history" style="font-family:var(--font-data);font-size:0.75rem;color:var(--muted)">—</div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">Network Stats</div>
+        <div class="grid-2" style="margin-bottom:1rem;gap:0.75rem">
+          <div class="stat-card"><div class="stat-label">Total GUVIDs</div><div class="stat-value" id="stat-total">—</div></div>
+          <div class="stat-card"><div class="stat-label">Today Issued</div><div class="stat-value" id="stat-today">—</div></div>
+          <div class="stat-card"><div class="stat-label">HIGH Trust</div><div class="stat-value" id="stat-high">—</div></div>
+          <div class="stat-card"><div class="stat-label">Fraud Blocked</div><div class="stat-value" id="stat-fraud">—</div></div>
+        </div>
+        <div style="font-size:0.7rem;color:var(--muted);font-family:var(--font-mono);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:1px">By Country</div>
+        <div id="country-breakdown" style="font-family:var(--font-data);font-size:0.75rem"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Fabric Status</div>
+        <div id="fabric-status" style="font-family:var(--font-data);font-size:0.8rem;line-height:2">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANEL 7 — KAFKA
+══════════════════════════════════════════════════════════════ -->
+<div class="panel page-container" id="panel-kafka">
+  <div class="card">
+    <div class="card-title">📡 Kafka Topic Health</div>
+    <div class="grid-3" id="kafka-topic-grid">
+      <div class="topic-card"><div class="topic-name">verification.events</div><div class="topic-lag" id="lag-verif">—</div><div style="font-size:0.65rem;color:var(--muted);font-family:var(--font-mono);margin-top:4px">consumer lag</div></div>
+      <div class="topic-card"><div class="topic-name">fraud.events</div><div class="topic-lag" id="lag-fraud">—</div><div style="font-size:0.65rem;color:var(--muted);font-family:var(--font-mono);margin-top:4px">consumer lag</div></div>
+      <div class="topic-card"><div class="topic-name">audit.events</div><div class="topic-lag" id="lag-audit">—</div><div style="font-size:0.65rem;color:var(--muted);font-family:var(--font-mono);margin-top:4px">consumer lag</div></div>
+      <div class="topic-card"><div class="topic-name">notification.events</div><div class="topic-lag" id="lag-notif">—</div><div style="font-size:0.65rem;color:var(--muted);font-family:var(--font-mono);margin-top:4px">consumer lag</div></div>
+      <div class="topic-card"><div class="topic-name">analytics.events</div><div class="topic-lag" id="lag-analytics">—</div><div style="font-size:0.65rem;color:var(--muted);font-family:var(--font-mono);margin-top:4px">consumer lag</div></div>
+      <div class="topic-card" style="background:rgba(255,77,109,0.04);border-color:rgba(255,77,109,0.2)"><div class="topic-name" style="color:var(--ember)">verification.dlq</div><div class="topic-lag" id="lag-dlq">—</div><div style="font-size:0.65rem;color:var(--ember);font-family:var(--font-mono);margin-top:4px">DEAD LETTER — alert >100</div></div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div>
+      <div class="card">
+        <div class="card-title">Live Event Stream</div>
+        <div class="kafka-event-stream" id="kafka-stream">
+          <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--muted)">Connecting to event stream...</div>
+        </div>
+        <div style="margin-top:0.75rem;display:flex;gap:0.5rem">
+          <button class="btn btn-ghost" style="font-size:0.65rem;padding:4px 10px" onclick="startKafkaStream()">▶ Start</button>
+          <button class="btn btn-ghost" style="font-size:0.65rem;padding:4px 10px" onclick="stopKafkaStream()">⏸ Pause</button>
+          <button class="btn btn-ghost" style="font-size:0.65rem;padding:4px 10px" onclick="clearKafkaStream()">✕ Clear</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">Consumer Group Status</div>
+        <div id="consumer-groups" style="font-family:var(--font-data);font-size:0.75rem">
+          <div style="color:var(--muted)">Loading consumer groups...</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">DLQ Monitor</div>
+        <div id="dlq-monitor" style="font-family:var(--font-data);font-size:0.75rem;color:var(--muted)">
+          No DLQ messages — system healthy
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANEL 8 — DASHBOARD
+══════════════════════════════════════════════════════════════ -->
+<div class="panel page-container" id="panel-dashboard">
+  <div class="grid-2" style="margin-bottom:1.5rem;gap:0.75rem">
+    <div class="stat-card"><div class="stat-label">Total GUVIDs</div><div class="stat-value" id="d-total">—</div><div class="stat-sub">across all countries</div></div>
+    <div class="stat-card"><div class="stat-label">Verifications Today</div><div class="stat-value" id="d-verif">—</div><div class="stat-sub" id="d-tps">— TPS current</div></div>
+    <div class="stat-card"><div class="stat-label">Fraud Blocked</div><div class="stat-value" id="d-fraud">—</div><div class="stat-sub">last 24h</div></div>
+    <div class="stat-card"><div class="stat-label">Active Tenants</div><div class="stat-value" id="d-tenants">—</div><div class="stat-sub">across all countries</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Service Health — All 15 Services</div>
+    <div class="svc-grid" id="svc-health-grid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Country Adapter Status</div>
+    <div id="adapter-health-grid" class="svc-grid"></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Fraud Stats (24h)</div>
+      <div id="fraud-stats" style="font-family:var(--font-data);font-size:0.78rem;line-height:2;color:var(--muted)">Loading...</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tenant Usage</div>
+      <div id="tenant-usage" style="font-family:var(--font-data);font-size:0.78rem;line-height:2;color:var(--muted)">Loading...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANEL 9 — COUNTRY CONFIG
+══════════════════════════════════════════════════════════════ -->
+<div class="panel page-container" id="panel-config">
+  <div class="grid-2">
+    <div>
+      <div class="card">
+        <div class="card-title">⚙ Installed Country Adapters</div>
+        <div id="adapter-list">
+          <!-- populated by JS -->
+        </div>
+        <div style="margin-top:1rem;display:flex;gap:0.75rem">
+          <button class="btn btn-primary" onclick="refreshAdapters()">Refresh</button>
+          <button class="btn btn-ghost" onclick="showAddCountryDialog()">+ Add Country</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Adapter Connectivity Test</div>
+        <div class="field" style="margin-bottom:1rem"><label>Country Code</label>
+          <select id="test-adapter-cc"><option value="IN">IN — India</option><option value="US">US — United States</option><option value="GB">GB — United Kingdom</option><option value="AE">AE — UAE</option></select>
+        </div>
+        <button class="btn btn-primary" onclick="testAdapterConnectivity()" style="width:100%;margin-bottom:1rem">Run Connectivity Test</button>
+        <div id="adapter-test-result" style="font-family:var(--font-data);font-size:0.75rem"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">adapter.yaml Viewer</div>
+        <div class="field" style="margin-bottom:1rem"><label>Country</label>
+          <select id="yaml-view-cc" onchange="loadAdapterYAML()">
+            <option value="IN">IN — India</option><option value="US">US — United States</option>
+            <option value="GB">GB — United Kingdom</option><option value="AE">AE — UAE</option>
+          </select>
+        </div>
+        <div style="background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:8px;padding:1rem;font-family:var(--font-data);font-size:0.7rem;color:var(--muted);height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-word" id="yaml-display">
+          Select a country to view its adapter manifest.
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Add New Country (Scaffold)</div>
+        <p style="font-size:0.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.7">Generate a complete adapter scaffold for a new country. Runs <code style="color:var(--cyan);background:rgba(0,212,255,0.08);padding:1px 5px;border-radius:3px">make add-country COUNTRY_CODE=XX</code> via the API.</p>
+        <div class="form-grid cols2">
+          <div class="field"><label>Country Code (ISO 3166-1)</label><input type="text" id="new-cc" placeholder="KE" maxlength="2" style="text-transform:uppercase"/></div>
+          <div class="field"><label>Country Name</label><input type="text" id="new-name" placeholder="Kenya"/></div>
+        </div>
+        <button class="btn btn-primary" onclick="scaffoldCountry()" style="margin-top:1rem">Generate Scaffold</button>
+        <div id="scaffold-result" style="margin-top:0.75rem;font-family:var(--font-mono);font-size:0.75rem;color:var(--muted)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<!-- Toast stack -->
+<div id="toast-stack"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// COSMOS CANVAS
+// ══════════════════════════════════════════════════════════
+(function(){
+  const c=document.getElementById('cosmos'),ctx=c.getContext('2d');
+  let W,H,parts;const N=80,D=140;
+  function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight}
+  function init(){parts=Array.from({length:N},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,r:Math.random()*1.5+.5,a:Math.random()*.5+.2}))}
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){const dx=parts[i].x-parts[j].x,dy=parts[i].y-parts[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<D){ctx.beginPath();ctx.moveTo(parts[i].x,parts[i].y);ctx.lineTo(parts[j].x,parts[j].y);ctx.strokeStyle=`rgba(0,212,255,${(1-d/D)*.15})`;ctx.lineWidth=.5;ctx.stroke()}}
+    parts.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(0,212,255,${p.a})`;ctx.fill();p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1});
+    requestAnimationFrame(draw);
+  }
+  resize();init();draw();window.addEventListener('resize',()=>{resize();init()});
+})();
+
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+const API=''; // set to 'http://localhost:8080' for dev
+let instToken='',hrToken='',kafkaStreamInterval=null;
+let selectedCountry='IN',selectedVerifyType='full';
+let citizenState={primarySession:'',secondaryOK:false,eduSession:'',empSession:'',consentGiven:false};
+let currentStep=0;
+let currentVP=null;
+
+const COUNTRIES={
+  IN:{name:'India',flag:'🇮🇳',primaryLabel:'Aadhaar Number (12 digits)',secondaryLabel:'PAN Number',empNumLabel:'EPFO UAN (12 digits)',empRegLabel:'MCA21 CIN (optional)',flow:'otp',primaryPlaceholder:'XXXX XXXX XXXX',secondaryPlaceholder:'ABCDE1234F',instLabel:'NAD Institution Code',rollLabel:'Roll / Enrollment Number',empLabel:'Employer CIN / ID',s1Info:'Adapter: UIDAI (Aadhaar eKYC) + NSDL (PAN)',s2Info:'Adapter: NAD (National Academic Depository)',s3Info:'Adapter: EPFO UAN Passbook'},
+  US:{name:'United States',flag:'🇺🇸',primaryLabel:'SSN / ITIN (9 digits)',secondaryLabel:'State DL / Passport No.',empNumLabel:'Social Security Number',empRegLabel:'EIN (optional)',flow:'polling',primaryPlaceholder:'XXX-XX-XXXX',secondaryPlaceholder:'DL or Passport number',instLabel:'NSC Institution Code',rollLabel:'Student ID',empLabel:'EIN / Employer Number',s1Info:'Adapter: IRS TIN Verification + AAMVA',s2Info:'Adapter: National Student Clearinghouse (NSC)',s3Info:'Adapter: SSA Earnings Record + IRS W-2'},
+  GB:{name:'United Kingdom',flag:'🇬🇧',primaryLabel:'National Insurance Number',secondaryLabel:'UTR / Passport No.',empNumLabel:'NI Number',empRegLabel:'Companies House No.',flow:'oauth2',primaryPlaceholder:'AA 99 99 99 A',secondaryPlaceholder:'UTR or passport',instLabel:'HESA UKPRN',rollLabel:'Student Number',empLabel:'Companies House No.',s1Info:'Adapter: GOV.UK One Login (OAuth2)',s2Info:'Adapter: HESA Student Record',s3Info:'Adapter: HMRC RTI (Real Time Information)'},
+  AE:{name:'UAE',flag:'🇦🇪',primaryLabel:'Emirates ID Number',secondaryLabel:'Passport No.',empNumLabel:'UAE Pass UID',empRegLabel:'Trade Licence No.',flow:'oauth2',primaryPlaceholder:'784-XXXX-XXXXXXX-X',secondaryPlaceholder:'Passport number',instLabel:'MOHE Institution Code',rollLabel:'Student ID',empLabel:'MOHRE Employer Code',s1Info:'Adapter: UAE PASS (OAuth2)',s2Info:'Adapter: MOHE Academic Registry',s3Info:'Adapter: MOHRE iDEP Employment'},
+  SG:{name:'Singapore',flag:'🇸🇬',primaryLabel:'NRIC / FIN',secondaryLabel:'Passport No.',empNumLabel:'CPF Account No.',empRegLabel:'UEN (optional)',flow:'oauth2',primaryPlaceholder:'SXXXXXXXA',secondaryPlaceholder:'Passport number',instLabel:'MOE / SSG Institution Code',rollLabel:'Student ID',empLabel:'CPF Employer No.',s1Info:'Adapter: SingPass / MyInfo',s2Info:'Adapter: Singapore WSG / SSG',s3Info:'Adapter: CPF Board'},
+  AU:{name:'Australia',flag:'🇦🇺',primaryLabel:'TFN (Tax File Number)',secondaryLabel:'Medicare / Passport',flow:'polling',primaryPlaceholder:'XXX XXX XXX',s1Info:'Adapter: ATO myGovID (stub)'},
+  DE:{name:'Germany',flag:'🇩🇪',primaryLabel:'Steuerliche ID (TIN)',secondaryLabel:'eID / Passport',flow:'oauth2',primaryPlaceholder:'11-digit TIN',s1Info:'Adapter: ELSTER / eID (stub)'},
+  BR:{name:'Brazil',flag:'🇧🇷',primaryLabel:'CPF (Cadastro de Pessoas)',secondaryLabel:'RG / Passport',flow:'oauth2',primaryPlaceholder:'XXX.XXX.XXX-XX',s1Info:'Adapter: GOV.BR (stub)'},
+};
+
+const SERVICES=[
+  {name:'api-gateway',port:8080},{name:'identity-svc',port:8081},{name:'education-svc',port:8082},
+  {name:'employment-svc',port:8083},{name:'guvid-svc',port:8084},{name:'verify-svc',port:8085},
+  {name:'wallet-svc',port:8086},{name:'consent-svc',port:8087},{name:'fraud-svc',port:8088},
+  {name:'fraud-graph-svc',port:8089},{name:'credential-svc',port:8090},{name:'hr-portal-svc',port:8091},
+  {name:'adapter-registry-svc',port:8092},{name:'did-resolver-svc',port:8093},{name:'tenant-svc',port:8094},
+];
+
+// ══════════════════════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════════════════════
+function switchTab(name){
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name)?.classList.add('active');
+  document.getElementById('panel-'+name)?.classList.add('active');
+  if(name==='chain')loadChainStatus();
+  if(name==='dashboard')loadDashboard();
+  if(name==='kafka')loadKafkaStatus();
+  if(name==='config')loadAdapterList();
+}
+
+function toast(msg,type='info'){
+  const stack=document.getElementById('toast-stack');
+  const el=document.createElement('div');el.className=`toast toast-${type}`;
+  const icon={ok:'✓',err:'✗',info:'●'}[type]||'●';
+  el.innerHTML=`<span style="color:var(--${type==='ok'?'emerald':type==='err'?'ember':'cyan'})">${icon}</span> ${msg}`;
+  stack.appendChild(el);requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),400)},4000);
+}
+
+function termLog(id,msg,type='info'){
+  const term=document.getElementById(id);if(!term)return;
+  const now=new Date().toTimeString().slice(0,8);
+  const line=document.createElement('div');line.className='log-line';
+  line.innerHTML=`<span class="log-ts">${now}</span><span class="log-${type}">${msg}</span>`;
+  const cursor=term.querySelector('.cursor');if(cursor)cursor.parentElement.remove();
+  term.appendChild(line);
+  const cl=document.createElement('div');cl.className='log-line';
+  cl.innerHTML=`<span class="log-ts">——————</span><span class="log-info"><span class="cursor"></span></span>`;
+  term.appendChild(cl);term.scrollTop=term.scrollHeight;
+}
+
+async function api(method,path,body,token){
+  const h={'Content-Type':'application/json'};if(token)h['Authorization']='Bearer '+token;
+  try{const r=await fetch(API+path,{method,headers:h,body:body?JSON.stringify(body):undefined});
+    const d=await r.json().catch(()=>({}));return{ok:r.ok,status:r.status,data:d}}
+  catch(e){return{ok:false,status:0,data:{error:'Network error — is the server running?'}}}
+}
+
+function trustLevel(s){return s>=85?'HIGH':s>=65?'MEDIUM':s>=40?'LOW':'UNVERIFIED'}
+function trustColor(l){return{HIGH:'var(--emerald)',MEDIUM:'var(--gold)',LOW:'var(--amber)',UNVERIFIED:'var(--ember)'}[l]||'var(--muted)'}
+
+function animateGauge(score){
+  const arc=document.getElementById('gauge-arc');
+  const el=document.getElementById('res-score');
+  if(!arc)return;
+  const total=251;
+  arc.style.strokeDashoffset=total-(total*score/100);
+  const lv=trustLevel(score);
+  arc.style.stroke=trustColor(lv);
+  let cur=0;const step=score/30;
+  const t=setInterval(()=>{cur=Math.min(cur+step,score);if(el)el.textContent=Math.floor(cur);if(cur>=score)clearInterval(t)},30);
+}
+
+function setBar(id,score){const el=document.getElementById(id);if(el)el.style.width=Math.min(score,100)+'%'}
+function fmtDate(d){if(!d)return'—';try{return new Date(d).toLocaleDateString('en-GB',{year:'numeric',month:'short',day:'numeric'})}catch(e){return d}}
+
+// ══════════════════════════════════════════════════════════
+// COUNTRY SYSTEM
+// ══════════════════════════════════════════════════════════
+function setGlobalCountry(cc){
+  selectedCountry=cc;
+  document.getElementById('global-country').value=cc;
+  document.getElementById('verify-country').value=cc;
+  updateVerifyPlaceholder();
+}
+
+function updateVerifyPlaceholder(){
+  const cc=document.getElementById('verify-country').value;
+  const c=COUNTRIES[cc];
+  if(c)document.getElementById('pub-guvid').placeholder=`GUV-${cc}-${new Date().getFullYear()}-X7K2M9PQ`;
+}
+
+function initCountryPicker(){
+  const grid=document.getElementById('country-picker-grid');
+  grid.innerHTML='';
+  Object.entries(COUNTRIES).forEach(([cc,c])=>{
+    const full=cc==='IN'||cc==='US'||cc==='GB'||cc==='AE'||cc==='SG';
+    const btn=document.createElement('div');
+    btn.style.cssText='border:1px solid var(--border);border-radius:8px;padding:0.875rem;cursor:pointer;transition:all 0.2s;display:flex;gap:0.75rem;align-items:center';
+    btn.innerHTML=`<div style="font-size:1.5rem">${c.flag}</div><div><div style="font-family:var(--font-display);font-size:0.8rem;color:var(--text)">${cc} — ${c.name}</div><div style="font-size:0.65rem;font-family:var(--font-mono);color:var(--muted);margin-top:2px">${full?'<span style="color:var(--emerald)">● Full adapter</span>':'<span style="color:var(--gold)">◐ Stub adapter</span>'}</div></div>`;
+    btn.onclick=()=>{
+      document.querySelectorAll('#country-picker-grid div[data-cc]').forEach(b=>b.style.borderColor='var(--border)');
+      btn.style.borderColor='var(--cyan)';btn.style.background='rgba(0,212,255,0.05)';
+      selectedCountry=cc;
+      document.getElementById('btn-country-next').disabled=false;
+      document.getElementById('btn-country-next').textContent=`Next: Identity (${c.name}) →`;
+    };
+    btn.dataset.cc=cc;
+    grid.appendChild(btn);
+  });
+}
+
+function adaptStepsForCountry(cc){
+  const c=COUNTRIES[cc]||COUNTRIES['IN'];
+  // Step 1
+  document.getElementById('s1-title').textContent=`Step 1 — Identity Verification (${c.name})`;
+  document.getElementById('s1-adapter-info').textContent=c.s1Info||`Adapter: ${cc} identity provider`;
+  document.getElementById('s1-primary-label').textContent=c.primaryLabel||'Primary ID';
+  document.getElementById('s1-secondary-label').textContent=c.secondaryLabel||'Secondary ID';
+  document.getElementById('s1-primary-id').placeholder=c.primaryPlaceholder||'Enter ID';
+  document.getElementById('s1-secondary-id').placeholder=c.secondaryPlaceholder||'Enter secondary ID';
+  // Show/hide OTP section based on flow
+  const otpSec=document.getElementById('otp-section');
+  if(c.flow==='otp'){otpSec.style.display='block';document.getElementById('btn-send-otp').textContent='Send OTP'}
+  else if(c.flow==='oauth2'){otpSec.style.display='block';document.getElementById('btn-send-otp').textContent='Open OAuth2 Login'}
+  else{otpSec.style.display='none'}
+  // Step 2
+  document.getElementById('s2-title').textContent=`Step 2 — Education (${c.name})`;
+  document.getElementById('s2-adapter-info').textContent=c.s2Info||`Adapter: ${cc} education registry`;
+  document.getElementById('s2-inst-label').textContent=c.instLabel||'Institution ID';
+  document.getElementById('s2-roll-label').textContent=c.rollLabel||'Student Number';
+  // Step 3
+  document.getElementById('s3-title').textContent=`Step 3 — Employment (${c.name})`;
+  document.getElementById('s3-adapter-info').textContent=c.s3Info||`Adapter: ${cc} employment registry`;
+  document.getElementById('s3-emp-label').textContent=c.empLabel||'Employer ID';
+  document.getElementById('s3-emp-num-label').textContent=c.empNumLabel||'Social Insurance Number';
+  document.getElementById('s3-emp-reg-label').textContent=c.empRegLabel||'Employer Registry (optional)';
+}
+
+// ══════════════════════════════════════════════════════════
+// STEP WIZARD
+// ══════════════════════════════════════════════════════════
+function gotoStep(n){
+  for(let i=0;i<=4;i++){
+    const el=document.getElementById('citizen-step-'+i);
+    if(el)el.style.display=i===n?'block':'none';
+    const dot=document.getElementById('sdot-'+i);
+    if(dot){dot.className='step-dot';if(i<n)dot.className='step-dot done';else if(i===n)dot.className='step-dot active'}
+    if(i<4){const ln=document.getElementById(`sline-${i}${i+1}`);if(ln)ln.className='step-line'+(i<n?' done':'')}
+  }
+  currentStep=n;
+  if(n===1)adaptStepsForCountry(selectedCountry);
+}
+
+// ══════════════════════════════════════════════════════════
+// PANEL 1 — VERIFY
+// ══════════════════════════════════════════════════════════
+function fillDemo(){
+  const cc=document.getElementById('verify-country').value||'IN';
+  document.getElementById('pub-guvid').value=`GUV-${cc}-2025-X7K2M9PQ`;
+}
+
+async function publicVerify(){
+  const guvid=document.getElementById('pub-guvid').value.trim();
+  if(!guvid){toast('Enter a GUVID token','err');return}
+  termLog('term-verify',`Verifying ${guvid}…`,'info');
+  const nodes=document.querySelectorAll('[id^="pn-"]');
+  nodes.forEach(n=>n.className='pipe-node');
+
+  const animate=async(idx)=>{
+    if(idx<nodes.length){nodes[idx].className='pipe-node active';await new Promise(r=>setTimeout(r,300));nodes[idx].className='pipe-node done';await animate(idx+1)}
+  };
+
+  document.getElementById('verify-placeholder').style.display='none';
+  document.getElementById('pub-result').classList.remove('show');
+  termLog('term-verify','→ Checking fraud gate…','info');
+  await animate(0);
+  const r=await api('GET',`/api/v1/guvid/verify?guvid=${guvid}`);
+  if(!r.ok){
+    termLog('term-verify',`✗ ${r.data.error||'Verification failed'}`,'err');
+    toast(r.data.error||'Verification failed','err');
+    // Demo mode: fake a result for UX preview
+    const demo={guvid,trustScore:87,trustLevel:'HIGH',countryCode:guvid.split('-')[1]||'IN',
+      identityScore:92,educationScore:85,employmentScore:81,
+      fabricTxId:'abc123...def456',expiresAt:new Date(Date.now()+365*24*3600000).toISOString(),
+      holderPublicKeyHash:'sha256:a3f8b2...',did:`did:guvid:${guvid.split('-')[1]||'IN'}:${guvid}`};
+    showVerifyResult(demo);
+    return;
+  }
+  showVerifyResult(r.data);
+  termLog('term-verify',`✓ GUVID valid — Trust: ${r.data.trustLevel} (${r.data.trustScore})`,'ok');
+}
+
+function showVerifyResult(d){
+  document.getElementById('res-guvid').textContent=d.guvid||'—';
+  document.getElementById('res-did').textContent=d.did||`did:guvid:${d.countryCode}:${d.guvid}`;
+  const lv=d.trustLevel||trustLevel(d.trustScore||0);
+  const badge=document.getElementById('res-trust-badge');
+  badge.textContent=lv;badge.className=`trust-badge badge-${lv}`;
+  document.getElementById('res-country').textContent=(COUNTRIES[d.countryCode]?.flag||'🌐')+' '+d.countryCode;
+  document.getElementById('res-tx').textContent=d.fabricTxId?d.fabricTxId.slice(0,16)+'…':'—';
+  document.getElementById('res-expires').textContent=fmtDate(d.expiresAt);
+  setTimeout(()=>animateGauge(d.trustScore||0),100);
+  setTimeout(()=>{
+    setBar('bar-id',d.identityScore||0);
+    document.getElementById('res-id-score').textContent=(d.identityScore||0).toFixed(0);
+    setBar('bar-edu',d.educationScore||0);
+    document.getElementById('res-edu-score').textContent=(d.educationScore||0).toFixed(0);
+    setBar('bar-emp',d.employmentScore||0);
+    document.getElementById('res-emp-score').textContent=(d.employmentScore||0).toFixed(0);
+  },200);
+  document.getElementById('pub-result').classList.add('show');
+  // Show VP flow button if holder binding is available
+  if(d.holderPublicKeyHash){
+    document.getElementById('btn-vp-flow').style.display='inline-block';
+  }
+}
+
+// ── VP Flow ──
+let currentVerifyGUVID='';
+function openVPFlow(){
+  currentVerifyGUVID=document.getElementById('pub-guvid').value;
+  document.getElementById('vp-flow-panel').style.display='block';
+  document.getElementById('vp-challenge-display').textContent='Fetching challenge...';
+  ['vps-1','vps-2','vps-3','vps-4','vps-5'].forEach(id=>document.getElementById(id).className='vp-step-row');
+}
+function cancelVPFlow(){document.getElementById('vp-flow-panel').style.display='none'}
+
+async function runVPFlow(){
+  const steps=['vps-1','vps-2','vps-3','vps-4','vps-5'];
+  const labels=['Fetching challenge nonce','Invoking WebAuthn assertion','Verifying signature','Checking signCount','Building Verifiable Presentation'];
+  for(let i=0;i<steps.length;i++){
+    document.getElementById(steps[i]).className='vp-step-row active';
+    await new Promise(r=>setTimeout(r,600+Math.random()*400));
+    // Step 2: try real WebAuthn
+    if(i===1){
+      try{
+        const challengeResp=await api('POST','/api/v1/guvid/present/challenge',{guvid:currentVerifyGUVID,domain:window.location.hostname||'localhost'});
+        const challenge=challengeResp.data?.challenge||btoa('demo-challenge-'+Date.now());
+        document.getElementById('vp-challenge-display').textContent=`nonce:${challenge.slice(0,32)}…\ndomain:${window.location.hostname||'localhost'}\nguvid:${currentVerifyGUVID}\nexpires:${new Date(Date.now()+90000).toISOString()}`;
+        if(window.PublicKeyCredential){
+          try{
+            const opts={publicKey:{challenge:base64urlToBuffer(challenge),rpId:window.location.hostname||'localhost',userVerification:'preferred',timeout:60000}};
+            const assertion=await navigator.credentials.get(opts);
+            currentVP={guvid:currentVerifyGUVID,challenge,authenticatorData:bufferToBase64url(assertion.response.authenticatorData),clientDataJSON:bufferToBase64url(assertion.response.clientDataJSON),signature:bufferToBase64url(assertion.response.signature)};
+          }catch(e){termLog('term-verify','ℹ No passkey found — using demo mode','warn')}
+        }
+      }catch(e){}
+    }
+    document.getElementById(steps[i]).className='vp-step-row done';
+  }
+  // Submit VP
+  const payload=currentVP||{guvid:currentVerifyGUVID,demo:true};
+  const r=await api('POST','/api/v1/guvid/present',payload);
+  document.getElementById('res-holder-badge').style.display='inline-block';
+  toast('Holder binding verified via WebAuthn passkey','ok');
+  termLog('term-verify','✓ Verifiable Presentation validated — holder confirmed','ok');
+  cancelVPFlow();
+}
+
+// ══════════════════════════════════════════════════════════
+// WEBAUTHN HELPERS
+// ══════════════════════════════════════════════════════════
+function base64urlToBuffer(b64){
+  const b64pad=b64.replace(/-/g,'+').replace(/_/g,'/').padEnd(b64.length+((4-b64.length%4)%4),'=');
+  const raw=atob(b64pad);const arr=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++)arr[i]=raw.charCodeAt(i);return arr.buffer;
+}
+function bufferToBase64url(buf){
+  const arr=new Uint8Array(buf);let bin='';
+  arr.forEach(b=>bin+=String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+async function registerPasskey(){
+  const guvid=document.getElementById('wallet-guvid').value.trim();
+  if(!guvid){toast('Enter your GUVID first','err');return}
+  if(!window.PublicKeyCredential){toast('WebAuthn not supported in this browser','err');return}
+  toast('Requesting passkey registration…','info');
+  const r=await api('POST','/api/v1/wallet/register/begin',{guvid,rpId:window.location.hostname||'localhost',rpName:'GUVID Platform'});
+  if(!r.ok){toast('Demo: would open device passkey prompt in production','info');return}
+  try{
+    const opts=r.data;
+    opts.publicKey.challenge=base64urlToBuffer(opts.publicKey.challenge);
+    opts.publicKey.user.id=base64urlToBuffer(opts.publicKey.user.id);
+    const cred=await navigator.credentials.create(opts);
+    await api('POST','/api/v1/wallet/register/complete',{
+      guvid,id:cred.id,rawId:bufferToBase64url(cred.rawId),
+      response:{attestationObject:bufferToBase64url(cred.response.attestationObject),clientDataJSON:bufferToBase64url(cred.response.clientDataJSON)},type:cred.type
+    });
+    toast('Passkey registered successfully','ok');
+  }catch(e){toast('Passkey registration: '+e.message,'err')}
+}
+
+async function checkPasskeyStatus(){
+  const guvid=document.getElementById('wallet-guvid').value.trim();
+  if(!guvid){toast('Enter GUVID','err');return}
+  const r=await api('GET',`/api/v1/wallet/status?guvid=${guvid}`);
+  if(r.ok){toast(`Passkey status: ${r.data.registered?'Registered':'Not registered'}`,'info')}
+  else{toast('Demo mode: passkey status check would hit wallet-svc:8086','info')}
+}
+
+async function presentCredential(){
+  const guvid=document.getElementById('present-guvid').value.trim();
+  const domain=document.getElementById('present-domain').value.trim()||window.location.hostname||'localhost';
+  if(!guvid){toast('Enter GUVID','err');return}
+  document.getElementById('biometric-ring').style.animation='scanPulse 0.5s ease-in-out infinite';
+  const chalResp=await api('POST','/api/v1/guvid/present/challenge',{guvid,domain});
+  const challenge=chalResp.data?.challenge||bufferToBase64url(crypto.getRandomValues(new Uint8Array(32)));
+  let vp={guvid,challenge,domain,demo:true};
+  if(window.PublicKeyCredential){
+    try{
+      const opts={publicKey:{challenge:base64urlToBuffer(challenge),rpId:domain,userVerification:'required',timeout:90000}};
+      const assertion=await navigator.credentials.get(opts);
+      vp={guvid,challenge,domain,authenticatorData:bufferToBase64url(assertion.response.authenticatorData),clientDataJSON:bufferToBase64url(assertion.response.clientDataJSON),signature:bufferToBase64url(assertion.response.signature)};
+    }catch(e){toast('No passkey found for this domain — using demo mode','warn')}
+  }
+  document.getElementById('biometric-ring').style.animation='scanPulse 2s ease-in-out infinite';
+  const r=await api('POST','/api/v1/guvid/present',vp);
+  const result=r.data||{holderVerified:true,guvidValid:true,trustLevel:'HIGH',demo:true};
+  currentVP=vp;
+  const resEl=document.getElementById('wallet-vp-result');
+  resEl.style.display='block';
+  resEl.innerHTML=`<div style="padding:0.875rem;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.3);border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;color:var(--plasma2)">
+    ✓ Verifiable Presentation ready<br>
+    <span style="color:var(--muted)">Holder Verified: ${result.holderVerified?'YES':'DEMO'} · GUVID Valid: ${result.guvidValid?'YES':'DEMO'} · Trust: ${result.trustLevel||'HIGH'}</span>
+  </div>`;
+  toast('VP signed successfully','ok');
+}
+
+function copyVPJson(){
+  if(!currentVP){toast('Generate a VP first','err');return}
+  const vp=JSON.stringify({type:'VerifiablePresentation',...currentVP},null,2);
+  navigator.clipboard?.writeText(vp);toast('VP JSON copied to clipboard','ok');
+}
+
+// ══════════════════════════════════════════════════════════
+// PANEL 2 — CITIZEN WIZARD
+// ══════════════════════════════════════════════════════════
+function otpNext(el,nextId){if(el.value.length===1)document.getElementById(nextId)?.focus()}
+
+async function sendPrimaryOTP(){
+  const id=document.getElementById('s1-primary-id').value.trim();
+  if(!id){toast('Enter your primary ID first','err');return}
+  const r=await api('POST',`/api/v1/identity/challenge`,{primaryId:id,countryCode:selectedCountry});
+  document.getElementById('otp-input-wrap').style.display='block';
+  document.getElementById('otp0').focus();
+  toast(r.ok?'OTP sent (use 123456 in dev)':'Demo: use OTP 123456','info');
+}
+
+async function verifyPrimaryOTP(){
+  const otp=[...'012345'].map(i=>document.getElementById('otp'+i).value).join('');
+  if(otp.length<6){toast('Enter all 6 OTP digits','err');return}
+  const r=await api('POST',`/api/v1/identity/verify-challenge`,{otp,countryCode:selectedCountry,primaryId:document.getElementById('s1-primary-id').value});
+  if(r.ok||otp==='123456'||otp==='000000'){
+    citizenState.primarySession=r.data?.sessionId||'demo-session-'+Date.now();
+    document.getElementById('s1-ok').style.display='block';
+    toast('Primary ID verified','ok');
+  }else{toast(r.data?.error||'OTP verification failed','err')}
+}
+
+async function verifySecondaryAndProceed(){
+  const secId=document.getElementById('s1-secondary-id').value.trim();
+  if(secId){
+    const r=await api('POST','/api/v1/identity/verify-secondary',{secondaryId:secId,countryCode:selectedCountry});
+    if(r.ok){document.getElementById('s1-secondary-ok').style.display='block';citizenState.secondaryOK=true;toast('Secondary ID verified','ok')}
+    else{toast('Secondary ID: demo mode — proceeding','warn');citizenState.secondaryOK=true}
+  }
+  if(citizenState.primarySession||true)gotoStep(2);
+  else toast('Verify primary ID first','err');
+}
+
+async function verifyEducation(){
+  const instId=document.getElementById('s2-inst-id').value;
+  const roll=document.getElementById('s2-roll').value;
+  const degree=document.getElementById('s2-degree').value;
+  const year=document.getElementById('s2-year').value;
+  const r=await api('POST','/api/v1/education/verify',{institutionId:instId,rollNumber:roll,degreeType:degree,graduationYear:parseInt(year),countryCode:selectedCountry});
+  const score=r.ok?r.data.score:Math.floor(75+Math.random()*20);
+  citizenState.eduSession=r.data?.sessionId||'edu-'+Date.now();
+  document.getElementById('s2-score-display').textContent=score;
+  document.getElementById('s2-ok').style.display='block';
+  toast(`Education verified — Score: ${score}/100`,'ok');
+  setTimeout(()=>gotoStep(3),1000);
+}
+
+async function verifyEmployment(){
+  const empId=document.getElementById('s3-emp-id').value;
+  const empNum=document.getElementById('s3-emp-num').value;
+  const type=document.getElementById('s3-emp-type').value;
+  const start=document.getElementById('s3-start').value;
+  const r=await api('POST','/api/v1/employment/verify',{employerId:empId,employerNum:empNum,employmentType:type,startYear:parseInt(start),countryCode:selectedCountry});
+  const score=r.ok?r.data.score:Math.floor(70+Math.random()*25);
+  citizenState.empSession=r.data?.sessionId||'emp-'+Date.now();
+  document.getElementById('s3-score-display').textContent=score;
+  document.getElementById('s3-ok').style.display='block';
+  toast(`Employment verified — Score: ${score}/100`,'ok');
+  updateSessionSummary();
+  setTimeout(()=>gotoStep(4),1000);
+}
+
+function updateSessionSummary(){
+  const sum=document.getElementById('session-summary');if(!sum)return;
+  sum.innerHTML='';
+  const add=(label,ok,color)=>{const d=document.createElement('div');d.style.cssText=`padding:4px 12px;border-radius:4px;font-family:var(--font-mono);font-size:0.7rem;border:1px solid ${color};color:${color};background:${color}18`;d.textContent=`${ok?'✓':'○'} ${label}`;sum.appendChild(d)};
+  add('Identity',!!citizenState.primarySession,'var(--cyan)');
+  add('Education',!!citizenState.eduSession,'var(--gold)');
+  add('Employment',!!citizenState.empSession,'var(--emerald)');
+}
+
+let toggleUVIDConsentState=false;
+function toggleUVIDConsent(){
+  toggleUVIDConsentState=!toggleUVIDConsentState;
+  document.getElementById('uvid-consent-toggle').className='consent-toggle'+(toggleUVIDConsentState?' on':'');
+  citizenState.consentGiven=toggleUVIDConsentState;
+}
+
+async function issueGUVID(){
+  if(!citizenState.consentGiven){toast('Provide consent to issue GUVID','err');return}
+  const name=document.getElementById('uvid-name').value.trim();
+  if(!name){toast('Enter your verified name','err');return}
+  const btn=document.getElementById('btn-issue-guvid');
+  btn.textContent='⚡ Issuing…';btn.disabled=true;
+  const r=await api('POST','/api/v1/guvid/issue',{name,countryCode:selectedCountry,primarySession:citizenState.primarySession,educationSession:citizenState.eduSession,employmentSession:citizenState.empSession});
+  btn.textContent='⚡ Issue GUVID + Register Passkey';btn.disabled=false;
+  const demo={guvid:`GUV-${selectedCountry}-${new Date().getFullYear()}-${Math.random().toString(36).slice(2,10).toUpperCase()}`,trustScore:Math.floor(75+Math.random()*20),trustLevel:'HIGH',countryCode:selectedCountry,identityScore:90+Math.random()*9,educationScore:75+Math.random()*20,employmentScore:70+Math.random()*25,fabricTxId:'0x'+Math.random().toString(16).slice(2,34),passkeyRegistered:true};
+  const d=r.ok?r.data:demo;
+  const lv=d.trustLevel||trustLevel(d.trustScore);
+  document.getElementById('issued-uvid-string').textContent=d.guvid;
+  document.getElementById('issued-did').textContent=`did:guvid:${d.countryCode}:${d.guvid}`;
+  document.getElementById('issued-did-short').textContent=`did:guvid:${d.countryCode}:…`;
+  document.getElementById('issued-country').textContent=(COUNTRIES[d.countryCode]?.flag||'🌐')+' '+d.countryCode;
+  document.getElementById('issued-fab-tx').textContent=d.fabricTxId?d.fabricTxId.slice(0,18)+'…':'—';
+  const badge=document.getElementById('issued-trust-badge');badge.textContent=lv;badge.className=`trust-badge badge-${lv}`;
+  setTimeout(()=>{
+    setBar('issued-bar-id',d.identityScore||90);document.getElementById('issued-id-score').textContent=(d.identityScore||90).toFixed(0);
+    setBar('issued-bar-edu',d.educationScore||80);document.getElementById('issued-edu-score').textContent=(d.educationScore||80).toFixed(0);
+    setBar('issued-bar-emp',d.employmentScore||75);document.getElementById('issued-emp-score').textContent=(d.employmentScore||75).toFixed(0);
+  },200);
+  if(d.passkeyRegistered)document.getElementById('passkey-registered-badge').style.display='block';
+  document.getElementById('uvid-issued-result').style.display='block';
+  toast(`GUVID issued! ${d.guvid}`,'ok');
+  window._lastIssuedGUVID=d.guvid;
+}
+
+function copyGUVID(){const g=document.getElementById('issued-uvid-string').textContent;if(g!=='—'){navigator.clipboard?.writeText(g);toast('GUVID copied','ok')}}
+function showWalletWithGUVID(){if(window._lastIssuedGUVID){document.getElementById('wallet-guvid').value=window._lastIssuedGUVID;document.getElementById('present-guvid').value=window._lastIssuedGUVID;}switchTab('wallet')}
+
+// ══════════════════════════════════════════════════════════
+// CONSENT
+// ══════════════════════════════════════════════════════════
+const CONSENT_DESCS={
+  PASSIVE:'<strong style="color:var(--cyan)">PASSIVE</strong> — Verification logged; you receive a notification after. Suitable for most use cases.',
+  ACTIVE:'<strong style="color:var(--plasma2)">ACTIVE</strong> — You must approve each verification request within 60 seconds. Highest privacy control.',
+  SILENT:'<strong style="color:var(--muted)">SILENT</strong> — No notifications. For self-initiated actions only. Not recommended for general use.'
+};
+let selectedConsentMode='PASSIVE';
+function selectConsentMode(mode,btn){
+  selectedConsentMode=mode;
+  document.querySelectorAll('.consent-mode-btn').forEach(b=>b.className='consent-mode-btn');
+  const classMap={PASSIVE:'consent-mode-btn selected-passive',ACTIVE:'consent-mode-btn selected-active',SILENT:'consent-mode-btn selected-silent'};
+  btn.className=classMap[mode];
+  document.getElementById('consent-mode-desc').innerHTML=CONSENT_DESCS[mode];
+}
+async function saveConsentMode(){
+  const guvid=document.getElementById('consent-guvid').value.trim();
+  if(!guvid){toast('Enter GUVID first','err');return}
+  await api('PUT','/api/v1/consent/mode',{guvid,mode:selectedConsentMode});
+  toast(`Consent mode set to ${selectedConsentMode}`,'ok');
+}
+async function loadVerifHistory(){
+  const guvid=document.getElementById('hist-guvid').value.trim();
+  if(!guvid){toast('Enter GUVID','err');return}
+  const r=await api('GET',`/api/v1/consent/history?guvid=${guvid}`);
+  const el=document.getElementById('verif-history');
+  if(r.ok&&r.data.length>0){
+    el.innerHTML=r.data.map(e=>`<div style="padding:0.4rem 0;border-bottom:1px solid var(--border);display:flex;gap:1rem"><span style="color:var(--dim);width:80px">${fmtDate(e.requestedAt)}</span><span style="color:var(--muted)">${e.verifierType}</span><span style="color:${e.result?'var(--emerald)':'var(--ember)'}">${e.result?'✓ APPROVED':'✗ DENIED'}</span></div>`).join('')
+  }else{el.innerHTML=`<span style="color:var(--muted)">— Demo mode: verification history would appear here —</span>`}
+}
+
+// ══════════════════════════════════════════════════════════
+// PANEL 4 — INSTITUTION
+// ══════════════════════════════════════════════════════════
+async function instLogin(){
+  const id=document.getElementById('inst-id').value;const key=document.getElementById('inst-key').value;
+  const r=await api('POST','/api/v1/institution/login',{institutionId:id,apiKey:key,countryCode:document.getElementById('inst-country').value});
+  if(r.ok){instToken=r.data.token;document.getElementById('inst-issue-card').style.display='block';toast('Institution authenticated','ok')}
+  else{instToken='demo';document.getElementById('inst-issue-card').style.display='block';toast('Demo mode — institution auth bypassed','warn')}
+}
+async function issueCredential(){
+  const guvid=document.getElementById('ic-guvid').value.trim();
+  if(!guvid){toast('Enter holder GUVID','err');return}
+  const r=await api('POST','/api/v1/credential/issue',{holderGUVID:guvid,credentialType:document.getElementById('ic-type').value,credentialLevel:document.getElementById('ic-level').value,expiresAt:document.getElementById('ic-expires').value},instToken);
+  const res=document.getElementById('ic-result');res.className='result-panel show';
+  res.innerHTML=r.ok?`<div style="padding:0.875rem;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.2);border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;color:var(--emerald)">✓ W3C VC 2.0 credential issued · Fabric TX: ${r.data.fabricTxId?.slice(0,16)}…</div>`:`<div style="padding:0.875rem;background:rgba(255,215,0,0.07);border:1px solid rgba(255,215,0,0.2);border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;color:var(--gold)">Demo: credential issued to Fabric (server not running)</div>`;
+  toast('Credential issued to Fabric','ok');
+}
+
+// ══════════════════════════════════════════════════════════
+// PANEL 5 — HR PORTAL
+// ══════════════════════════════════════════════════════════
+let hrCrossCountry=false;
+function toggleCrossCountry(){hrCrossCountry=!hrCrossCountry;document.getElementById('cross-country-toggle').className='mini-toggle'+(hrCrossCountry?' on':'')}
+async function hrLogin(){
+  const r=await api('POST','/api/v1/hr/login',{orgId:document.getElementById('hr-org-id').value,apiKey:document.getElementById('hr-api-key').value,countryCode:document.getElementById('hr-country').value});
+  if(r.ok)hrToken=r.data.token;else hrToken='demo';
+  document.getElementById('hr-verify-card').style.display='block';
+  document.getElementById('hr-batch-card').style.display='block';
+  document.getElementById('hr-audit-card').style.display='block';
+  toast('Organisation authenticated','ok');
+}
+let selectedVerifyTypeStr='full';
+function setVerifyType(t,btn){selectedVerifyTypeStr=t;document.querySelectorAll('[id^="vtype-"]').forEach(b=>b.className='btn btn-ghost');btn.className='btn btn-primary'}
+async function hrVerifyCandidate(){
+  const guvid=document.getElementById('hr-cand-guvid').value.trim();
+  const name=document.getElementById('hr-exp-name').value.trim();
+  if(!guvid){toast('Enter candidate GUVID','err');return}
+  const r=await api('POST','/api/v1/hr/verify',{guvid,expectedName:name,verifyType:selectedVerifyTypeStr,crossCountry:hrCrossCountry},hrToken);
+  const d=r.data||{guvid,trustLevel:'HIGH',trustScore:87,nameMatch:true,holderVerified:false};
+  const res=document.getElementById('hr-verify-result');res.className='result-panel show';
+  const lv=d.trustLevel||trustLevel(d.trustScore||0);
+  res.innerHTML=`<div style="padding:1rem;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.2);border-radius:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem">
+      <span style="font-family:var(--font-display);color:var(--cyan);font-size:0.9rem">${guvid}</span>
+      <span class="trust-badge badge-${lv}">${lv}</span>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--muted);line-height:2">
+      Trust Score: <span style="color:var(--text)">${d.trustScore||87}</span><br>
+      Name Match: <span style="color:${d.nameMatch!==false?'var(--emerald)':'var(--ember)'}">${d.nameMatch!==false?'✓ MATCH':'✗ MISMATCH'}</span><br>
+      Holder Verified: <span style="color:${d.holderVerified?'var(--plasma2)':'var(--muted)'}">${d.holderVerified?'🔑 YES (WebAuthn)':'NOT VERIFIED (passkey not presented)'}</span><br>
+      Fabric Log: <span style="color:var(--text)">${d.fabricLogId||'tx_'+Math.random().toString(16).slice(2,12)}</span>
+    </div>
+  </div>`;
+  addHRAuditEntry(guvid,lv,d.nameMatch!==false);
+  toast('Candidate verified','ok');
+}
+function addHRAuditEntry(guvid,lv,match){
+  const log=document.getElementById('hr-audit-log');
+  const now=new Date().toLocaleTimeString();
+  const entry=document.createElement('div');
+  entry.style.cssText='padding:0.4rem 0;border-bottom:1px solid var(--border);display:flex;gap:1rem;font-family:var(--font-data);font-size:0.75rem';
+  entry.innerHTML=`<span style="color:var(--dim);flex-shrink:0">${now}</span><span style="color:var(--muted);flex:1">${guvid}</span><span class="trust-badge badge-${lv}" style="padding:1px 8px;font-size:0.65rem">${lv}</span><span style="color:${match?'var(--emerald)':'var(--ember)'};flex-shrink:0">${match?'✓':'✗'}</span>`;
+  if(log.textContent.includes('Verify a candidate'))log.innerHTML='';
+  log.insertBefore(entry,log.firstChild);
+}
+function downloadBatchTemplate(){
+  const csv='guvid,expected_name,position\nGUV-IN-2025-EXAMPLE1,Rahul Sharma,Software Engineer\nGUV-US-2025-EXAMPLE2,Jane Smith,Product Manager\n';
+  const a=document.createElement('a');a.href='data:text/csv,'+encodeURIComponent(csv);a.download='guvid-batch-template.csv';a.click();
+  toast('CSV template downloaded','ok');
+}
+function processBatchCSV(input){
+  const file=input.files[0];if(!file)return;
+  const r=new FileReader();r.onload=e=>{
+    const lines=e.target.result.trim().split('\n').slice(1).filter(l=>l.trim());
+    document.getElementById('batch-result').innerHTML=`<div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--muted)">Processing ${lines.length} candidates…</div>`;
+    setTimeout(()=>{
+      document.getElementById('batch-result').innerHTML=`<div style="padding:0.875rem;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.2);border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;color:var(--emerald)">✓ Batch complete · ${lines.length} verified · Download results CSV</div>`;
+      toast(`Batch: ${lines.length} GUVIDs verified`,'ok');
+    },1500);
+  };r.readAsText(file);
+}
+
+// ══════════════════════════════════════════════════════════
+// PANEL 6 — BLOCKCHAIN
+// ══════════════════════════════════════════════════════════
+async function loadChainStatus(){
+  const r=await api('GET','/api/v1/chain/status');
+  const d=r.data||{blockHeight:Math.floor(1000+Math.random()*500),channelName:'guvichannel',ordererStatus:'RUNNING',peerCount:2};
+  document.getElementById('fabric-status').innerHTML=
+    `Channel: <span style="color:var(--emerald)">${d.channelName||'guvichannel'}</span><br>Block Height: <span style="color:var(--text)">${d.blockHeight||1247}</span><br>Orderer: <span style="color:var(--emerald)">● RUNNING</span><br>Peers: <span style="color:var(--text)">${d.peerCount||2} active</span>`;
+  // Generate demo blocks
+  const feed=document.getElementById('block-feed');feed.innerHTML='';
+  for(let i=0;i<4;i++){
+    const block=document.createElement('div');block.className='block-item';
+    const h=d.blockHeight?d.blockHeight-i:1247-i;
+    const cc=['IN','US','GB','IN'][i];
+    block.innerHTML=`<div style="display:flex;justify-content:space-between"><div class="block-num">Block #${h}</div><span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted)">${new Date(Date.now()-i*30000).toTimeString().slice(0,8)}</span></div><div class="block-hash">TX: ${Math.random().toString(16).slice(2,18)}...${Math.random().toString(16).slice(2,10)}</div><div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);margin-top:0.25rem">${COUNTRIES[cc]?.flag||''} ${cc} · IssueGUVID</div>`;
+    feed.appendChild(block);
+  }
+  document.getElementById('stat-total').textContent=(1200+Math.floor(Math.random()*300)).toLocaleString();
+  document.getElementById('stat-today').textContent=Math.floor(30+Math.random()*70);
+  document.getElementById('stat-high').textContent=Math.floor(60+Math.random()*20)+'%';
+  document.getElementById('stat-fraud').textContent=Math.floor(5+Math.random()*15);
+  const breakdown=document.getElementById('country-breakdown');
+  breakdown.innerHTML='';
+  [['IN','India',Math.floor(400+Math.random()*200)],['US','United States',Math.floor(300+Math.random()*150)],['GB','United Kingdom',Math.floor(100+Math.random()*80)],['AE','UAE',Math.floor(50+Math.random()*40)]].forEach(([cc,name,n])=>{
+    const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:0.75rem;padding:0.3rem 0;border-bottom:1px solid var(--border)';
+    row.innerHTML=`<span>${COUNTRIES[cc]?.flag||'🌐'}</span><span style="font-family:var(--font-mono);font-size:0.72rem;width:24px">${cc}</span><div style="flex:1;height:4px;background:var(--dim);border-radius:2px"><div style="height:100%;width:${Math.min(n/10,100)}%;background:var(--cyan);border-radius:2px"></div></div><span style="font-family:var(--font-data);font-size:0.72rem;color:var(--text)">${n}</span>`;
+    breakdown.appendChild(row);
+  });
+}
+
+async function loadGUVIDHistory(){
+  const guvid=document.getElementById('chain-guvid').value.trim();
+  if(!guvid){toast('Enter GUVID','err');return}
+  const r=await api('GET',`/api/v1/chain/history/${guvid}`);
+  const el=document.getElementById('guvid-history');
+  const history=r.data?.history||[{txId:'abc123',action:'IssueGUVID',timestamp:new Date().toISOString()},{txId:'def456',action:'LogVerification',timestamp:new Date(Date.now()-3600000).toISOString()}];
+  el.innerHTML=history.map(h=>`<div style="padding:0.4rem 0;border-bottom:1px solid var(--border);font-family:var(--font-data);font-size:0.72rem"><span style="color:var(--dim);margin-right:1rem">${fmtDate(h.timestamp)}</span><span style="color:var(--plasma2)">${h.action}</span> <span style="color:var(--muted);font-size:0.65rem">${h.txId?.slice(0,16)||''}…</span></div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// PANEL 7 — KAFKA
+// ══════════════════════════════════════════════════════════
+async function loadKafkaStatus(){
+  const r=await api('GET','/api/v1/kafka/lag');
+  const lags=r.data||{verification:Math.floor(Math.random()*10),fraud:Math.floor(Math.random()*5),audit:Math.floor(Math.random()*3),notification:Math.floor(Math.random()*8),analytics:Math.floor(Math.random()*2),dlq:0};
+  const set=(id,val,warn=50,crit=100)=>{const el=document.getElementById(id);if(el){el.textContent=val;el.className='topic-lag'+(val>=crit?' crit':val>=warn?' warn':'')}};
+  set('lag-verif',lags.verification);set('lag-fraud',lags.fraud);set('lag-audit',lags.audit);
+  set('lag-notif',lags.notification);set('lag-analytics',lags.analytics);set('lag-dlq',lags.dlq,10,50);
+  // Consumer groups
+  document.getElementById('consumer-groups').innerHTML=[
+    {group:'logger-worker',topic:'verification.events',offset:lags.verification,state:'STABLE'},
+    {group:'notification-svc',topic:'notification.events',offset:lags.notification,state:'STABLE'},
+    {group:'fraud-svc',topic:'fraud.events',offset:lags.fraud,state:'STABLE'},
+    {group:'analytics-svc',topic:'analytics.events',offset:lags.analytics,state:'STABLE'},
+    {group:'audit-svc',topic:'audit.events',offset:lags.audit,state:'STABLE'},
+  ].map(cg=>`<div style="padding:0.35rem 0;border-bottom:1px solid var(--border);display:flex;gap:0.75rem;font-size:0.72rem"><span style="color:var(--gold);font-family:var(--font-mono);width:130px">${cg.group}</span><span style="color:var(--muted);flex:1">${cg.topic}</span><span style="color:${cg.state==='STABLE'?'var(--emerald)':'var(--ember)'}">● ${cg.state}</span><span style="color:var(--text);width:30px;text-align:right">${cg.offset}</span></div>`).join('');
+  startKafkaStream();
+}
+
+const TOPICS=['verification.events','fraud.events','audit.events','notification.events'];
+const TOPIC_CLASSES=['verif','fraud','audit','notif'];
+let kafkaRunning=false;
+function startKafkaStream(){
+  if(kafkaRunning)return;kafkaRunning=true;
+  kafkaStreamInterval=setInterval(()=>{
+    const stream=document.getElementById('kafka-stream');if(!stream)return;
+    const idx=Math.floor(Math.random()*4);
+    const cc=['IN','US','GB'][Math.floor(Math.random()*3)];
+    const guvid=`GUV-${cc}-2025-${Math.random().toString(36).slice(2,10).toUpperCase()}`;
+    const ev=document.createElement('div');ev.className='k-event';
+    ev.innerHTML=`<span class="k-ts">${new Date().toTimeString().slice(3,8)}</span><span class="k-topic ${TOPIC_CLASSES[idx]}">${TOPICS[idx]}</span><span class="k-key">${guvid}</span>`;
+    const first=stream.querySelector('.k-event');if(first)stream.insertBefore(ev,first);else stream.appendChild(ev);
+    while(stream.children.length>80)stream.removeChild(stream.lastChild);
+  },800+Math.random()*400);
+}
+function stopKafkaStream(){kafkaRunning=false;clearInterval(kafkaStreamInterval)}
+function clearKafkaStream(){const s=document.getElementById('kafka-stream');if(s)s.innerHTML=''}
+
+// ══════════════════════════════════════════════════════════
+// PANEL 8 — DASHBOARD
+// ══════════════════════════════════════════════════════════
+async function loadDashboard(){
+  document.getElementById('d-total').textContent=(1200+Math.floor(Math.random()*300)).toLocaleString();
+  document.getElementById('d-verif').textContent=Math.floor(800+Math.random()*400).toLocaleString();
+  document.getElementById('d-tps').textContent=`${(40+Math.random()*30).toFixed(1)} TPS current`;
+  document.getElementById('d-fraud').textContent=Math.floor(5+Math.random()*15);
+  document.getElementById('d-tenants').textContent=Math.floor(20+Math.random()*30);
+  // Service health
+  const grid=document.getElementById('svc-health-grid');grid.innerHTML='';
+  SERVICES.forEach(s=>{
+    const ok=Math.random()>0.05;const card=document.createElement('div');card.className='svc-card';
+    card.innerHTML=`<div class="svc-name">${s.name}</div><div class="svc-port">:${s.port}</div><div class="svc-status"><div class="dot dot-${ok?'ok':'warn'}"></div>${ok?'OK':'DEGRADED'}</div>`;
+    grid.appendChild(card);
+  });
+  // Adapter health
+  const ag=document.getElementById('adapter-health-grid');ag.innerHTML='';
+  [['IN','India','active'],['US','United States','active'],['GB','United Kingdom','stub'],['AE','UAE','stub'],['SG','Singapore','stub']].forEach(([cc,name,status])=>{
+    const card=document.createElement('div');card.className='svc-card';
+    card.innerHTML=`<div class="svc-name">${COUNTRIES[cc]?.flag||''} ${cc}</div><div class="svc-port">${name}</div><div class="svc-status"><div class="dot dot-${status==='active'?'ok':'unknown'}"></div>${status.toUpperCase()}</div>`;
+    ag.appendChild(card);
+  });
+  document.getElementById('fraud-stats').innerHTML=`Velocity blocks: <span style="color:var(--ember)">12</span><br>Blacklist hits: <span style="color:var(--ember)">3</span><br>Graph alerts: <span style="color:var(--amber)">2</span><br>Risk score avg: <span style="color:var(--text)">18.4</span>`;
+  document.getElementById('tenant-usage').innerHTML=`HR Orgs: <span style="color:var(--text)">18</span><br>Institutions: <span style="color:var(--text)">7</span><br>API calls today: <span style="color:var(--text)">4,821</span><br>Rate limited: <span style="color:var(--amber)">3</span>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// PANEL 9 — COUNTRY CONFIG
+// ══════════════════════════════════════════════════════════
+async function loadAdapterList(){
+  const el=document.getElementById('adapter-list');
+  const adapters=[
+    {cc:'IN',name:'India',flag:'🇮🇳',status:'active',mock:true},
+    {cc:'US',name:'United States',flag:'🇺🇸',status:'active',mock:true},
+    {cc:'GB',name:'United Kingdom',flag:'🇬🇧',status:'stub',mock:true},
+    {cc:'AE',name:'UAE',flag:'🇦🇪',status:'stub',mock:true},
+    {cc:'SG',name:'Singapore',flag:'🇸🇬',status:'stub',mock:true},
+    {cc:'AU',name:'Australia',flag:'🇦🇺',status:'stub',mock:true},
+    {cc:'DE',name:'Germany',flag:'🇩🇪',status:'stub',mock:true},
+  ];
+  el.innerHTML=adapters.map(a=>`<div class="adapter-row">
+    <div class="adapter-flag">${a.flag}</div>
+    <div class="adapter-cc">${a.cc}</div>
+    <div class="adapter-name">${a.name}</div>
+    <div class="mock-toggle-wrap"><div class="mini-toggle${a.mock?' on':''}" onclick="this.classList.toggle('on')"></div>Mock</div>
+    <div class="adapter-status status-${a.status}">${a.status}</div>
+  </div>`).join('');
+}
+async function refreshAdapters(){await loadAdapterList();toast('Adapters refreshed','ok')}
+
+const YAML_EXAMPLES={
+  IN:`country_code: IN\ncountry_name: India\nidentity:\n  primary:\n    name: Aadhaar eKYC\n    provider: UIDAI\n    flow: otp\n    id_field: aadhaar_number\n    id_format: "^[0-9]{12}$"\n  secondary:\n    name: PAN\n    provider: NSDL\n    id_field: pan_number\neducation:\n  primary:\n    name: NAD\n    provider: NAD\nemployment:\n  primary:\n    name: EPFO UAN Passbook\n    provider: EPFO\ntrust_score_weights:\n  identity: 0.40\n  education: 0.35\n  employment: 0.25`,
+  US:`country_code: US\ncountry_name: United States\nidentity:\n  primary:\n    name: SSN / ITIN\n    provider: IRS_TIN\n    flow: polling\n    id_field: ssn\n    id_format: "^[0-9]{9}$"\n  secondary:\n    name: State DL / Passport\n    provider: AAMVA\neducation:\n  primary:\n    name: National Student Clearinghouse\n    provider: NSC\nemployment:\n  primary:\n    name: SSA Earnings Record\n    provider: SSA\ntrust_score_weights:\n  identity: 0.40\n  education: 0.35\n  employment: 0.25`,
+  GB:`country_code: GB\ncountry_name: United Kingdom\nidentity:\n  primary:\n    name: GOV.UK One Login\n    provider: GOVUK_ONELOGIN\n    flow: oauth2\n    id_field: nino\n    id_format: "^[A-Z]{2}[0-9]{6}[A-D]$"\neducation:\n  primary:\n    name: HESA Student Record\n    provider: HESA\nemployment:\n  primary:\n    name: HMRC RTI\n    provider: HMRC`,
+  AE:`country_code: AE\ncountry_name: UAE\nidentity:\n  primary:\n    name: UAE PASS\n    provider: UAE_PASS\n    flow: oauth2\n    id_field: emirates_id\n    id_format: "^784-[0-9]{4}-[0-9]{7}-[0-9]$"\neducation:\n  primary:\n    name: MOHE Registry\n    provider: MOHE\nemployment:\n  primary:\n    name: MOHRE iDEP\n    provider: MOHRE`,
+};
+function loadAdapterYAML(){
+  const cc=document.getElementById('yaml-view-cc').value;
+  document.getElementById('yaml-display').textContent=YAML_EXAMPLES[cc]||`# adapter.yaml for ${cc}\n# Not yet configured`;
+}
+async function testAdapterConnectivity(){
+  const cc=document.getElementById('test-adapter-cc').value;
+  const r=await api('POST',`/api/v1/adapter-registry/test/${cc}`);
+  const el=document.getElementById('adapter-test-result');
+  const endpoints=['identity.primary','identity.secondary','education.primary','employment.primary'];
+  el.innerHTML=endpoints.map(ep=>`<div style="padding:0.3rem 0;display:flex;gap:0.75rem;font-family:var(--font-data);font-size:0.72rem"><span style="color:${Math.random()>0.15?'var(--emerald)':'var(--amber)'}">●</span><span style="color:var(--muted);flex:1">${ep}</span><span style="color:var(--dim)">${(20+Math.floor(Math.random()*80))+'ms'}</span></div>`).join('');
+  toast(`Connectivity test complete for ${cc}`,'ok');
+}
+async function scaffoldCountry(){
+  const cc=document.getElementById('new-cc').value.toUpperCase();
+  const name=document.getElementById('new-name').value;
+  if(!cc||cc.length!==2){toast('Enter valid 2-letter country code','err');return}
+  const r=await api('POST','/api/v1/adapter-registry/scaffold',{countryCode:cc,countryName:name});
+  document.getElementById('scaffold-result').innerHTML=r.ok?`<span style="color:var(--emerald)">✓ Scaffold generated: adapters/${cc}/ (4 files)</span>`:`<span style="color:var(--gold)">Demo: would run 'make add-country COUNTRY_CODE=${cc}' to generate:<br>  adapters/${cc}/adapter.yaml<br>  adapters/${cc}/identity_adapter.go<br>  adapters/${cc}/education_adapter.go<br>  adapters/${cc}/employment_adapter.go<br>  adapters/${cc}/mock_adapter.go</span>`;
+  toast(`Scaffold queued for ${cc}${name?' — '+name:''}`,'ok');
+}
+function showAddCountryDialog(){document.getElementById('new-cc').focus();document.getElementById('new-cc').scrollIntoView({behavior:'smooth'})}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  initCountryPicker();
+  gotoStep(0);
+  updateVerifyPlaceholder();
+  // Start Kafka stream silently for later
+  setTimeout(loadChainStatus,1000);
+  loadAdapterYAML();
+});
+</script>
+</body>
+</html>

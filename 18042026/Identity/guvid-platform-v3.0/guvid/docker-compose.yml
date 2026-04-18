@@ -1,0 +1,282 @@
+version: '3.9'
+
+services:
+
+  # ── Infrastructure ─────────────────────────────────────────────────────────
+  mariadb:
+    image: mariadb:11.2
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: guvid_platform
+    ports: ["3306:3306"]
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./migrations/mariadb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    ports: ["9000:9000", "9001:9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASS:-minioadmin123}
+    command: server /data --console-address ":9001"
+    volumes: [minio_data:/data]
+
+  # ── Mock Government API Integrations ──────────────────────────────────────
+  mock-integrations:
+    build:
+      context: ./services/mock-integrations
+      dockerfile: Dockerfile
+    ports: ["8099:8099"]
+    environment:
+      GIN_MODE: release
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8099/health"]
+      interval: 10s
+      retries: 5
+
+  # ── Core Platform Service ─────────────────────────────────────────────────
+  tenant-svc:
+    build:
+      context: ./services/tenant-svc
+      dockerfile: Dockerfile
+    ports: ["8094:8094"]
+    environment:
+      MARIADB_DSN: root:${DB_ROOT_PASSWORD:-password}@tcp(mariadb:3306)/guvid_platform?parseTime=true
+      JWT_SECRET: ${JWT_SECRET:-change_me_jwt_secret_32_chars}
+      REDIS_ADDR: redis:6379
+      GIN_MODE: release
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8094/health"]
+      interval: 10s
+      retries: 5
+
+  # ── API Gateway (Entry Point) ─────────────────────────────────────────────
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    ports: ["8080:8080"]
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-change_me_jwt_secret_32_chars}
+      COUNTRY_CODE: ${COUNTRY_CODE:-IN}
+      GIN_MODE: release
+    depends_on:
+      tenant-svc:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      retries: 5
+
+  # ── Identity Service ──────────────────────────────────────────────────────
+  identity-svc:
+    build:
+      context: ./services/identity-svc
+      dockerfile: Dockerfile
+    ports: ["8081:8081"]
+    environment:
+      UIDAI_API_BASE: http://mock-integrations:8099/in
+      NSDL_API_BASE: http://mock-integrations:8099/in
+      NATIONAL_ID_SALT: ${NATIONAL_ID_SALT:-change_me_salt}
+      GIN_MODE: release
+    depends_on:
+      mock-integrations:
+        condition: service_healthy
+
+  # ── Institution Service ───────────────────────────────────────────────────
+  institution-svc:
+    build:
+      context: ./services/institution-svc
+      dockerfile: Dockerfile
+    ports: ["8082:8082"]
+    environment:
+      MARIADB_DSN: root:${DB_ROOT_PASSWORD:-password}@tcp(mariadb:3306)/guvid_platform?parseTime=true
+      AES_KEY: ${AES_KEY:-}
+      GIN_MODE: release
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  # ── GUVID Issuance Service ────────────────────────────────────────────────
+  guvid-svc:
+    build:
+      context: ./services/guvid-svc
+      dockerfile: Dockerfile
+    ports: ["8084:8084"]
+    environment:
+      MARIADB_DSN: root:${DB_ROOT_PASSWORD:-password}@tcp(mariadb:3306)/guvid_platform?parseTime=true
+      REDIS_ADDR: redis:6379
+      NATIONAL_ID_SALT: ${NATIONAL_ID_SALT:-change_me_salt}
+      GUVID_SIGNING_PRIVATE_KEY: ${GUVID_SIGNING_PRIVATE_KEY:-}
+      GIN_MODE: release
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Verify Service ────────────────────────────────────────────────────────
+  verify-svc:
+    build:
+      context: ./services/verify-svc
+      dockerfile: Dockerfile
+    ports: ["8085:8085"]
+    environment:
+      MARIADB_DSN: root:${DB_ROOT_PASSWORD:-password}@tcp(mariadb:3306)/guvid_platform?parseTime=true
+      REDIS_ADDR: redis:6379
+      GIN_MODE: release
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Wallet / WebAuthn Service ─────────────────────────────────────────────
+  wallet-svc:
+    build:
+      context: ./services/wallet-svc
+      dockerfile: Dockerfile
+    ports: ["8086:8086"]
+    environment:
+      MARIADB_DSN: root:${DB_ROOT_PASSWORD:-password}@tcp(mariadb:3306)/guvid_platform?parseTime=true
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-localhost}
+      GIN_MODE: release
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  # ── Consent Service ───────────────────────────────────────────────────────
+  consent-svc:
+    build:
+      context: ./services/consent-svc
+      dockerfile: Dockerfile
+    ports: ["8087:8087"]
+    environment:
+      MARIADB_DSN: root:${DB_ROOT_PASSWORD:-password}@tcp(mariadb:3306)/guvid_platform?parseTime=true
+      GIN_MODE: release
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  # ── Fraud Detection Service ───────────────────────────────────────────────
+  fraud-svc:
+    build:
+      context: ./services/fraud-svc
+      dockerfile: Dockerfile
+    ports: ["8088:8088"]
+    environment:
+      MARIADB_DSN: root:${DB_ROOT_PASSWORD:-password}@tcp(mariadb:3306)/guvid_platform?parseTime=true
+      REDIS_ADDR: redis:6379
+      GIN_MODE: release
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── HR Portal Service ─────────────────────────────────────────────────────
+  hr-portal-svc:
+    build:
+      context: ./services/hr-portal-svc
+      dockerfile: Dockerfile
+    ports: ["8091:8091"]
+    environment:
+      MARIADB_DSN: root:${DB_ROOT_PASSWORD:-password}@tcp(mariadb:3306)/guvid_platform?parseTime=true
+      GIN_MODE: release
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  # ── Regulatory Service ────────────────────────────────────────────────────
+  regulatory-svc:
+    build:
+      context: ./services/regulatory-svc
+      dockerfile: Dockerfile
+    ports: ["8093:8093"]
+    environment:
+      MARIADB_DSN: root:${DB_ROOT_PASSWORD:-password}@tcp(mariadb:3306)/guvid_platform?parseTime=true
+      GIN_MODE: release
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  # ── Notification Service ──────────────────────────────────────────────────
+  notification-svc:
+    build:
+      context: ./services/notification-svc
+      dockerfile: Dockerfile
+    ports: ["8095:8095"]
+    environment:
+      MARIADB_DSN: root:${DB_ROOT_PASSWORD:-password}@tcp(mariadb:3306)/guvid_platform?parseTime=true
+      GIN_MODE: release
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  # ── Recovery Service ──────────────────────────────────────────────────────
+  recovery-svc:
+    build:
+      context: ./services/recovery-svc
+      dockerfile: Dockerfile
+    ports: ["8096:8096"]
+    environment:
+      MARIADB_DSN: root:${DB_ROOT_PASSWORD:-password}@tcp(mariadb:3306)/guvid_platform?parseTime=true
+      GIN_MODE: release
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  # ── Frontend ──────────────────────────────────────────────────────────────
+  frontend:
+    image: nginx:1.25-alpine
+    ports: ["3000:80"]
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80"]
+      interval: 10s
+      retries: 5
+
+  # ── Observability ─────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    ports: ["9090:9090"]
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    ports: ["3001:3000"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASS:-admin123}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes: [grafana_data:/var/lib/grafana]
+
+volumes:
+  mariadb_data:
+  minio_data:
+  grafana_data:

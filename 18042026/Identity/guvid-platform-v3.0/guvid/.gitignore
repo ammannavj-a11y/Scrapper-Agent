@@ -1,0 +1,11 @@
+.env
+*.pem
+*.key
+go.sum
+vendor/
+tmp/
+__pycache__/
+.DS_Store
+deployments/fabric/crypto-config/
+deployments/fabric/channel-artifacts/
+*.zip
