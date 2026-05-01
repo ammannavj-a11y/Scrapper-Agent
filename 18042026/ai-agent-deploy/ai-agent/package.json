@@ -1,0 +1,20 @@
+{
+  "name": "ai-agent",
+  "version": "4.2.1",
+  "description": "Advanced AI Agent — J.A.R.V.I.S / F.R.I.D.A.Y / E.D.I.T.H style. Multilingual: English, Telugu, Dutch, Hindi. Online (Claude AI) + Offline modes. Voice input/output.",
+  "main": "server.js",
+  "scripts": {
+    "start":   "node server.js",
+    "dev":     "node server.js",
+    "open":    "open http://localhost:3000 || start http://localhost:3000 || xdg-open http://localhost:3000"
+  },
+  "keywords": ["ai", "agent", "jarvis", "friday", "edith", "voice", "assistant", "anthropic", "claude"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
