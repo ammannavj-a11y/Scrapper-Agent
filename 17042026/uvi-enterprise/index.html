@@ -1,0 +1,2126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>UVI — Unified Verification Infrastructure</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Orbitron:wght@400;600;800;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void: #010308;
+  --deep: #030a14;
+  --surface: #07111f;
+  --surface2: #0c1e35;
+  --glass: rgba(7,17,31,0.7);
+  --border: rgba(0,212,255,0.12);
+  --border2: rgba(0,212,255,0.25);
+  --cyan: #00d4ff;
+  --cyan2: #00a8cc;
+  --plasma: #7c3aed;
+  --plasma2: #9d5cf0;
+  --emerald: #00ff88;
+  --ember: #ff4d6d;
+  --gold: #ffd700;
+  --amber: #ff9a00;
+  --text: #e2f4ff;
+  --muted: #4a7fa5;
+  --dim: #1e3a52;
+  --r: 12px;
+  --font-display: 'Orbitron', monospace;
+  --font-mono: 'Space Mono', monospace;
+  --font-body: 'Inter', sans-serif;
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--void);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* ── Animated starfield canvas ── */
+#cosmos { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+/* ── Grid overlay ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+}
+
+/* ── Scan line ── */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 1;
+  background: linear-gradient(transparent 50%, rgba(0,0,0,0.03) 50%);
+  background-size: 100% 4px;
+  animation: scanlines 0.1s linear infinite;
+  pointer-events: none; opacity: 0.4;
+}
+@keyframes scanlines { from{background-position:0 0} to{background-position:0 4px} }
+
+/* ── Global layout ── */
+#app { position: relative; z-index: 2; }
+
+/* ══════════════════════════════════════════════════════════
+   HEADER
+══════════════════════════════════════════════════════════ */
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(1,3,8,0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border2);
+  padding: 0 2rem;
+  height: 64px;
+  display: flex; align-items: center; gap: 1.5rem;
+}
+
+.logo-mark {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--cyan), var(--plasma));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 0.75rem; font-weight: 900;
+  color: #fff; letter-spacing: 1px;
+  box-shadow: 0 0 20px rgba(0,212,255,0.4);
+  flex-shrink: 0;
+  animation: logoGlow 3s ease-in-out infinite;
+}
+@keyframes logoGlow {
+  0%,100%{ box-shadow: 0 0 20px rgba(0,212,255,0.4); }
+  50%{ box-shadow: 0 0 40px rgba(0,212,255,0.7), 0 0 80px rgba(124,58,237,0.3); }
+}
+
+.logo-text {
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 1.1rem;
+  letter-spacing: 3px;
+  background: linear-gradient(90deg, var(--cyan), var(--plasma2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.logo-sub { font-size: 0.6rem; color: var(--muted); letter-spacing: 2px; font-family: var(--font-mono); margin-top: -2px; }
+
+.header-chips { display: flex; gap: 0.5rem; margin-left: auto; align-items: center; }
+.chip {
+  padding: 4px 12px; border-radius: 20px; font-size: 0.65rem;
+  font-family: var(--font-mono); font-weight: 700; letter-spacing: 1.5px;
+  border: 1px solid; text-transform: uppercase;
+}
+.chip-fabric { border-color: rgba(0,255,136,0.4); color: var(--emerald); background: rgba(0,255,136,0.08); }
+.chip-live { border-color: rgba(255,77,109,0.4); color: var(--ember); background: rgba(255,77,109,0.08); animation: blink 1.5s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.chip-secure { border-color: rgba(0,212,255,0.4); color: var(--cyan); background: rgba(0,212,255,0.08); }
+
+/* ══════════════════════════════════════════════════════════
+   NAV TABS
+══════════════════════════════════════════════════════════ */
+.nav-rail {
+  display: flex; gap: 0; padding: 0 2rem;
+  background: rgba(3,10,20,0.8);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto; scrollbar-width: none;
+}
+.nav-rail::-webkit-scrollbar { display: none; }
+
+.nav-tab {
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: var(--muted); font-size: 0.8rem;
+  font-family: var(--font-mono); letter-spacing: 1px;
+  text-transform: uppercase; white-space: nowrap;
+  transition: all 0.25s;
+  display: flex; align-items: center; gap: 0.6rem;
+  position: relative;
+}
+.nav-tab .nav-icon { font-size: 1rem; }
+.nav-tab:hover { color: var(--cyan); }
+.nav-tab.active {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+  background: linear-gradient(180deg, transparent, rgba(0,212,255,0.04));
+}
+.nav-tab.active::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+}
+
+/* ══════════════════════════════════════════════════════════
+   MAIN PANELS
+══════════════════════════════════════════════════════════ */
+main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+.panel { display: none; }
+.panel.active { display: block; animation: fadeSlideIn 0.3s ease; }
+@keyframes fadeSlideIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+/* ══════════════════════════════════════════════════════════
+   GLASSMORPHISM CARDS
+══════════════════════════════════════════════════════════ */
+.card {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(12px);
+  position: relative; overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.card:hover { border-color: var(--border2); }
+.card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.3), transparent);
+}
+
+.card-title {
+  font-family: var(--font-display); font-size: 0.75rem; font-weight: 700;
+  letter-spacing: 3px; text-transform: uppercase; color: var(--cyan);
+  margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.75rem;
+}
+.card-title::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--border2), transparent);
+}
+
+/* ══════════════════════════════════════════════════════════
+   STEP WIZARD
+══════════════════════════════════════════════════════════ */
+.wizard-steps {
+  display: flex; gap: 0; margin-bottom: 2rem;
+  background: rgba(3,10,20,0.6);
+  border: 1px solid var(--border);
+  border-radius: var(--r); padding: 4px; overflow: hidden;
+}
+.step {
+  flex: 1; padding: 0.875rem 0.5rem; cursor: pointer;
+  text-align: center; border-radius: 8px;
+  transition: all 0.3s; position: relative;
+}
+.step-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--muted); color: var(--muted);
+  font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 0.35rem; transition: all 0.3s;
+}
+.step-label { font-size: 0.65rem; font-family: var(--font-mono); color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+.step.active .step-num { background: var(--cyan); border-color: var(--cyan); color: #000; box-shadow: 0 0 15px rgba(0,212,255,0.5); }
+.step.active .step-label { color: var(--cyan); }
+.step.done .step-num { background: var(--emerald); border-color: var(--emerald); color: #000; }
+.step.done .step-label { color: var(--emerald); }
+.step.active { background: rgba(0,212,255,0.06); }
+
+/* ══════════════════════════════════════════════════════════
+   FORMS
+══════════════════════════════════════════════════════════ */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-grid.cols1 { grid-template-columns: 1fr; }
+.form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.field { display: flex; flex-direction: column; gap: 0.4rem; }
+.field label {
+  font-size: 0.65rem; font-family: var(--font-mono); color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;
+}
+.field input, .field select, .field textarea {
+  background: rgba(3,10,20,0.8);
+  border: 1px solid var(--dim);
+  border-radius: 8px; padding: 0.75rem 1rem;
+  color: var(--text); font-family: var(--font-mono); font-size: 0.875rem;
+  transition: all 0.2s; outline: none;
+}
+.field input:focus, .field select:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.1), 0 0 20px rgba(0,212,255,0.08);
+  background: rgba(0,212,255,0.03);
+}
+.field input::placeholder { color: var(--dim); }
+.field select option { background: var(--deep); }
+
+/* ══════════════════════════════════════════════════════════
+   BUTTONS
+══════════════════════════════════════════════════════════ */
+.btn {
+  padding: 0.75rem 1.75rem; border: none; border-radius: 8px;
+  font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer;
+  transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem;
+  position: relative; overflow: hidden;
+}
+.btn::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.08) 50%, transparent 70%);
+  transform: translateX(-100%); transition: transform 0.4s;
+}
+.btn:hover::before { transform: translateX(100%); }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--cyan2), var(--cyan));
+  color: #000;
+  box-shadow: 0 4px 20px rgba(0,212,255,0.3);
+}
+.btn-primary:hover { box-shadow: 0 6px 30px rgba(0,212,255,0.5); transform: translateY(-1px); }
+
+.btn-plasma {
+  background: linear-gradient(135deg, var(--plasma), var(--plasma2));
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(124,58,237,0.3);
+}
+.btn-plasma:hover { box-shadow: 0 6px 30px rgba(124,58,237,0.5); transform: translateY(-1px); }
+
+.btn-ghost {
+  background: transparent; color: var(--cyan);
+  border: 1px solid var(--border2);
+}
+.btn-ghost:hover { background: rgba(0,212,255,0.06); border-color: var(--cyan); }
+
+.btn-danger { background: linear-gradient(135deg, #c0392b, var(--ember)); color: #fff; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+/* ══════════════════════════════════════════════════════════
+   OTP INPUT CLUSTER
+══════════════════════════════════════════════════════════ */
+.otp-cluster { display: flex; gap: 0.5rem; }
+.otp-digit {
+  width: 48px; height: 56px;
+  background: rgba(3,10,20,0.8);
+  border: 1px solid var(--dim); border-radius: 8px;
+  color: var(--cyan); font-family: var(--font-display); font-size: 1.25rem;
+  text-align: center; outline: none; transition: all 0.2s;
+}
+.otp-digit:focus { border-color: var(--cyan); box-shadow: 0 0 15px rgba(0,212,255,0.2); }
+
+/* ══════════════════════════════════════════════════════════
+   TRUST SCORE GAUGE
+══════════════════════════════════════════════════════════ */
+.gauge-container { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.gauge-wrap { position: relative; width: 160px; height: 80px; }
+.gauge-svg { width: 160px; height: 88px; }
+.gauge-track { fill: none; stroke: var(--dim); stroke-width: 8; }
+.gauge-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1.2s cubic-bezier(.34,1.56,.64,1); }
+.gauge-score {
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  font-family: var(--font-display); font-size: 2rem; font-weight: 900;
+  color: var(--text); line-height: 1;
+}
+.gauge-label { font-size: 0.65rem; font-family: var(--font-mono); letter-spacing: 2px; text-transform: uppercase; }
+
+/* ══════════════════════════════════════════════════════════
+   UVID CARD (holographic)
+══════════════════════════════════════════════════════════ */
+.uvid-hologram {
+  background: linear-gradient(135deg, rgba(0,212,255,0.05) 0%, rgba(124,58,237,0.1) 50%, rgba(0,255,136,0.05) 100%);
+  border: 1px solid rgba(0,212,255,0.3);
+  border-radius: 16px; padding: 2rem;
+  position: relative; overflow: hidden;
+  box-shadow: 0 0 60px rgba(0,212,255,0.1), inset 0 0 60px rgba(124,58,237,0.05);
+}
+.uvid-hologram::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.03) 50%, transparent 60%);
+  animation: holoSheen 4s ease-in-out infinite;
+}
+@keyframes holoSheen {
+  0%,100%{ transform: translateX(-100%) rotate(0deg); }
+  50%{ transform: translateX(100%) rotate(0deg); }
+}
+.uvid-string {
+  font-family: var(--font-display); font-size: 2rem; font-weight: 900;
+  letter-spacing: 4px;
+  background: linear-gradient(90deg, var(--cyan), var(--plasma2), var(--emerald));
+  background-size: 200%;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  animation: gradientFlow 3s ease-in-out infinite;
+}
+@keyframes gradientFlow {
+  0%,100%{ background-position: 0% 50%; }
+  50%{ background-position: 100% 50%; }
+}
+.uvid-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1.5rem; }
+.uvid-meta-item label { font-size: 0.6rem; color: var(--muted); font-family: var(--font-mono); letter-spacing: 1px; text-transform: uppercase; }
+.uvid-meta-item span { display: block; font-weight: 600; font-size: 0.9rem; margin-top: 4px; }
+
+.trust-badge {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 6px 16px; border-radius: 20px; font-family: var(--font-mono);
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+}
+.trust-high { background: rgba(0,255,136,0.12); color: var(--emerald); border: 1px solid rgba(0,255,136,0.3); }
+.trust-medium { background: rgba(255,212,0,0.1); color: var(--gold); border: 1px solid rgba(255,212,0,0.3); }
+.trust-low { background: rgba(255,154,0,0.1); color: var(--amber); border: 1px solid rgba(255,154,0,0.3); }
+.trust-invalid { background: rgba(255,77,109,0.1); color: var(--ember); border: 1px solid rgba(255,77,109,0.3); }
+
+/* ══════════════════════════════════════════════════════════
+   VERIFICATION DIMENSION BARS
+══════════════════════════════════════════════════════════ */
+.dim-bar-wrap { margin-bottom: 0.875rem; }
+.dim-bar-header { display: flex; justify-content: space-between; margin-bottom: 6px; font-family: var(--font-mono); font-size: 0.75rem; }
+.dim-bar-label { color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+.dim-bar-score { font-weight: 700; color: var(--text); }
+.dim-bar-track { height: 6px; background: var(--dim); border-radius: 3px; overflow: hidden; }
+.dim-bar-fill { height: 100%; border-radius: 3px; transition: width 1.2s cubic-bezier(.34,1.56,.64,1); }
+.bar-identity { background: linear-gradient(90deg, var(--cyan2), var(--cyan)); }
+.bar-education { background: linear-gradient(90deg, var(--plasma), var(--plasma2)); }
+.bar-employment { background: linear-gradient(90deg, #00cc88, var(--emerald)); }
+
+/* ══════════════════════════════════════════════════════════
+   STATUS/RESULT PANELS
+══════════════════════════════════════════════════════════ */
+.result-panel {
+  border-radius: var(--r); padding: 1.5rem;
+  border-left: 3px solid; display: none; position: relative; overflow: hidden;
+}
+.result-panel.show { display: block; animation: fadeSlideIn 0.4s ease; }
+.result-valid { background: rgba(0,255,136,0.06); border-color: var(--emerald); }
+.result-invalid { background: rgba(255,77,109,0.06); border-color: var(--ember); }
+.result-warn { background: rgba(255,212,0,0.06); border-color: var(--gold); }
+
+.result-icon { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; }
+.result-title { font-family: var(--font-display); font-size: 0.9rem; font-weight: 800; letter-spacing: 2px; margin-bottom: 1rem; }
+.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.result-item label { font-size: 0.6rem; color: var(--muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 1px; }
+.result-item span { display: block; font-weight: 600; font-size: 0.875rem; margin-top: 3px; font-family: var(--font-mono); }
+
+/* ══════════════════════════════════════════════════════════
+   LIVE TERMINAL LOG
+══════════════════════════════════════════════════════════ */
+.terminal {
+  background: rgba(0,0,0,0.6); border: 1px solid var(--dim);
+  border-radius: var(--r); padding: 1rem;
+  font-family: var(--font-mono); font-size: 0.75rem;
+  max-height: 200px; overflow-y: auto; margin-top: 1rem;
+}
+.terminal::-webkit-scrollbar { width: 4px; }
+.terminal::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+.log-line { margin-bottom: 4px; display: flex; gap: 0.75rem; }
+.log-ts { color: var(--muted); flex-shrink: 0; }
+.log-ok { color: var(--emerald); }
+.log-info { color: var(--cyan); }
+.log-warn { color: var(--amber); }
+.log-err { color: var(--ember); }
+.log-fabric { color: var(--plasma2); }
+.cursor { display: inline-block; width: 8px; height: 14px; background: var(--cyan); animation: cursorBlink 1s step-end infinite; vertical-align: middle; }
+@keyframes cursorBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ══════════════════════════════════════════════════════════
+   STATS GRID
+══════════════════════════════════════════════════════════ */
+.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 1.5rem; }
+.stat-tile {
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1.25rem; text-align: center;
+  backdrop-filter: blur(8px); position: relative; overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.stat-tile:hover { transform: translateY(-2px); border-color: var(--border2); }
+.stat-tile::before {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: var(--accent-color, var(--cyan));
+  opacity: 0.5;
+}
+.stat-value { font-family: var(--font-display); font-size: 2rem; font-weight: 900; line-height: 1; }
+.stat-label { font-size: 0.65rem; font-family: var(--font-mono); color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 0.4rem; }
+
+/* ══════════════════════════════════════════════════════════
+   TABLE
+══════════════════════════════════════════════════════════ */
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.data-table th {
+  background: rgba(0,212,255,0.05); padding: 0.75rem 1rem;
+  text-align: left; font-family: var(--font-mono); font-size: 0.65rem;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px;
+  border-bottom: 1px solid var(--border);
+}
+.data-table td {
+  padding: 0.875rem 1rem; border-bottom: 1px solid rgba(0,212,255,0.06);
+  font-family: var(--font-mono); vertical-align: middle;
+}
+.data-table tr:hover td { background: rgba(0,212,255,0.03); }
+
+/* ══════════════════════════════════════════════════════════
+   SCANNING ANIMATION
+══════════════════════════════════════════════════════════ */
+.scan-box {
+  position: relative; border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 1.5rem; overflow: hidden;
+  background: rgba(0,212,255,0.02);
+}
+.scan-line {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  animation: scanDown 2s ease-in-out infinite;
+  top: 0;
+}
+@keyframes scanDown {
+  0%{ top: 0; opacity: 1; }
+  90%{ top: calc(100% - 2px); opacity: 1; }
+  100%{ top: calc(100% - 2px); opacity: 0; }
+}
+.scan-corner {
+  position: absolute; width: 16px; height: 16px;
+  border-color: var(--cyan); border-style: solid; border-width: 0;
+}
+.sc-tl { top: 8px; left: 8px; border-top-width: 2px; border-left-width: 2px; }
+.sc-tr { top: 8px; right: 8px; border-top-width: 2px; border-right-width: 2px; }
+.sc-bl { bottom: 8px; left: 8px; border-bottom-width: 2px; border-left-width: 2px; }
+.sc-br { bottom: 8px; right: 8px; border-bottom-width: 2px; border-right-width: 2px; }
+
+/* ══════════════════════════════════════════════════════════
+   NOTIFICATIONS / TOAST
+══════════════════════════════════════════════════════════ */
+#toast-stack {
+  position: fixed; bottom: 2rem; right: 2rem; z-index: 1000;
+  display: flex; flex-direction: column; gap: 0.75rem; pointer-events: none;
+}
+.toast {
+  background: rgba(7,17,31,0.95); backdrop-filter: blur(16px);
+  border: 1px solid var(--border2); border-radius: var(--r);
+  padding: 0.875rem 1.25rem; font-size: 0.8rem; font-family: var(--font-mono);
+  min-width: 260px; max-width: 380px;
+  transform: translateX(120%); transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+  display: flex; align-items: center; gap: 0.75rem; pointer-events: auto;
+}
+.toast.show { transform: none; }
+.toast.toast-ok { border-left: 3px solid var(--emerald); }
+.toast.toast-err { border-left: 3px solid var(--ember); }
+.toast.toast-info { border-left: 3px solid var(--cyan); }
+
+/* ══════════════════════════════════════════════════════════
+   LOADING STATES
+══════════════════════════════════════════════════════════ */
+.spinner { width: 16px; height: 16px; border: 2px solid rgba(0,212,255,0.2); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.6s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-overlay {
+  position: absolute; inset: 0; background: rgba(1,3,8,0.7);
+  backdrop-filter: blur(4px); border-radius: var(--r);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  z-index: 10;
+}
+.ring-loader {
+  width: 48px; height: 48px;
+  border: 2px solid var(--dim);
+  border-top-color: var(--cyan); border-right-color: var(--plasma);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.loading-text { font-family: var(--font-mono); font-size: 0.75rem; color: var(--cyan); letter-spacing: 2px; }
+
+/* ══════════════════════════════════════════════════════════
+   BLOCKCHAIN FEED
+══════════════════════════════════════════════════════════ */
+.block-feed { display: flex; flex-direction: column; gap: 0.5rem; }
+.block-item {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  background: rgba(124,58,237,0.05);
+  border: 1px solid rgba(124,58,237,0.15);
+  border-radius: 8px; font-family: var(--font-mono); font-size: 0.75rem;
+  animation: blockIn 0.4s ease;
+}
+@keyframes blockIn { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:none} }
+.block-height { color: var(--plasma2); font-weight: 700; min-width: 60px; }
+.block-hash { color: var(--muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.block-time { color: var(--dim); flex-shrink: 0; }
+.block-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--emerald); flex-shrink: 0; animation: blockPulse 2s ease-in-out infinite; }
+@keyframes blockPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+/* ══════════════════════════════════════════════════════════
+   CONSENT TOGGLE
+══════════════════════════════════════════════════════════ */
+.consent-row {
+  display: flex; align-items: flex-start; gap: 0.875rem;
+  padding: 1rem; border: 1px solid var(--border);
+  border-radius: 8px; background: rgba(0,212,255,0.03);
+  cursor: pointer;
+}
+.consent-row input[type="checkbox"] { display: none; }
+.consent-toggle {
+  width: 40px; height: 22px; border-radius: 11px;
+  background: var(--dim); flex-shrink: 0; position: relative;
+  transition: background 0.3s; margin-top: 2px; cursor: pointer;
+}
+.consent-toggle::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  transition: transform 0.3s;
+}
+.consent-row.checked .consent-toggle { background: var(--cyan); }
+.consent-row.checked .consent-toggle::after { transform: translateX(18px); }
+.consent-text { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+.consent-text strong { color: var(--text); }
+
+/* ══════════════════════════════════════════════════════════
+   HR PORTAL SPECIFIC
+══════════════════════════════════════════════════════════ */
+.hr-accent { --accent: var(--amber); }
+.hr-title { color: var(--amber) !important; }
+.hr-tab.active { border-bottom-color: var(--amber) !important; color: var(--amber) !important; }
+.btn-amber {
+  background: linear-gradient(135deg, #e67e00, var(--amber));
+  color: #000;
+  box-shadow: 0 4px 20px rgba(255,154,0,0.25);
+}
+.btn-amber:hover { box-shadow: 0 6px 30px rgba(255,154,0,0.45); transform: translateY(-1px); }
+
+/* ══════════════════════════════════════════════════════════
+   PIPELINE FLOW DIAGRAM
+══════════════════════════════════════════════════════════ */
+.pipeline {
+  display: flex; align-items: center; gap: 0; padding: 1.5rem 0; overflow-x: auto;
+}
+.pipe-node {
+  flex-shrink: 0; text-align: center; width: 100px;
+}
+.pipe-icon {
+  width: 52px; height: 52px; border-radius: 12px; margin: 0 auto 0.5rem;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; border: 1px solid; transition: all 0.3s;
+}
+.pipe-name { font-size: 0.6rem; font-family: var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.pipe-icon.active { box-shadow: 0 0 20px; animation: nodePulse 1.5s ease-in-out infinite; }
+@keyframes nodePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+.pipe-icon-aadhaar { border-color: rgba(0,212,255,0.4); background: rgba(0,212,255,0.08); }
+.pipe-icon-pan { border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.05); }
+.pipe-icon-edu { border-color: rgba(124,58,237,0.4); background: rgba(124,58,237,0.08); }
+.pipe-icon-emp { border-color: rgba(0,255,136,0.4); background: rgba(0,255,136,0.08); }
+.pipe-icon-fraud { border-color: rgba(255,77,109,0.4); background: rgba(255,77,109,0.08); }
+.pipe-icon-uvid { border-color: rgba(255,212,0,0.4); background: rgba(255,212,0,0.08); }
+.pipe-icon-fabric { border-color: rgba(124,58,237,0.5); background: rgba(124,58,237,0.1); }
+.pipe-arrow {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  min-width: 24px; position: relative;
+}
+.pipe-arrow::after {
+  content: ''; display: block; width: 100%; height: 1px;
+  background: linear-gradient(90deg, var(--border2), var(--cyan), var(--border2));
+  position: relative;
+}
+.pipe-arrow::before {
+  content: '▶'; color: var(--cyan); font-size: 0.5rem;
+  position: absolute; right: -2px; opacity: 0.7;
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════════════ */
+@media (max-width:768px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .form-grid.cols3 { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .result-grid { grid-template-columns: 1fr; }
+  .uvid-meta { grid-template-columns: 1fr 1fr; }
+  .wizard-steps .step-label { display: none; }
+  header { padding: 0 1rem; }
+  main { padding: 1.25rem 1rem; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   QR CODE DISPLAY
+══════════════════════════════════════════════════════════ */
+.qr-wrap {
+  width: 160px; height: 160px;
+  background: #fff; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 1rem auto; position: relative;
+  box-shadow: 0 0 30px rgba(0,212,255,0.2);
+}
+.qr-wrap canvas { border-radius: 4px; }
+
+/* ══════════════════════════════════════════════════════════
+   SECTION DIVIDERS
+══════════════════════════════════════════════════════════ */
+.divider { height: 1px; background: linear-gradient(90deg, transparent, var(--border2), transparent); margin: 1.5rem 0; }
+</style>
+</head>
+<body>
+
+<canvas id="cosmos"></canvas>
+
+<div id="app">
+
+<!-- ══ HEADER ══ -->
+<header>
+  <div class="logo-mark">UVI</div>
+  <div>
+    <div class="logo-text">UNIFIED VERIFICATION</div>
+    <div class="logo-sub">INFRASTRUCTURE · INDIA</div>
+  </div>
+  <div class="header-chips">
+    <span class="chip chip-fabric">⛓ FABRIC 2.5</span>
+    <span class="chip chip-secure">🔐 ZERO TRUST</span>
+    <span class="chip chip-live">● LIVE</span>
+  </div>
+</header>
+
+<!-- ══ NAV ══ -->
+<div class="nav-rail">
+  <div class="nav-tab active" onclick="switchTab('verify')" id="tab-verify">
+    <span class="nav-icon">🔍</span> Public Verify
+  </div>
+  <div class="nav-tab" onclick="switchTab('citizen')" id="tab-citizen">
+    <span class="nav-icon">🪪</span> Citizen Portal
+  </div>
+  <div class="nav-tab" onclick="switchTab('institution')" id="tab-institution">
+    <span class="nav-icon">🏛</span> Institutions
+  </div>
+  <div class="nav-tab hr-tab" onclick="switchTab('hr')" id="tab-hr">
+    <span class="nav-icon">🏢</span> HR Portal
+  </div>
+  <div class="nav-tab" onclick="switchTab('chain')" id="tab-chain">
+    <span class="nav-icon">📡</span> Blockchain
+  </div>
+  <div class="nav-tab" onclick="switchTab('dashboard')" id="tab-dashboard">
+    <span class="nav-icon">📊</span> Dashboard
+  </div>
+</div>
+
+<main>
+
+<!-- ══════════════════════════════════════════════════════
+     PANEL: PUBLIC VERIFY
+══════════════════════════════════════════════════════════ -->
+<div class="panel active" id="panel-verify">
+
+  <!-- Pipeline diagram -->
+  <div class="card">
+    <div class="card-title">🔗 Verification Pipeline</div>
+    <div class="pipeline" id="pipeline">
+      <div class="pipe-node">
+        <div class="pipe-icon pipe-icon-aadhaar" id="pn-aadhaar">🪪</div>
+        <div class="pipe-name">Aadhaar</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-node">
+        <div class="pipe-icon pipe-icon-pan" id="pn-pan">📄</div>
+        <div class="pipe-name">PAN</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-node">
+        <div class="pipe-icon pipe-icon-edu" id="pn-edu">🎓</div>
+        <div class="pipe-name">DigiLocker</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-node">
+        <div class="pipe-icon pipe-icon-emp" id="pn-epfo">💼</div>
+        <div class="pipe-name">EPFO</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-node">
+        <div class="pipe-icon pipe-icon-fraud" id="pn-fraud">🛡</div>
+        <div class="pipe-name">Fraud AI</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-node">
+        <div class="pipe-icon pipe-icon-uvid" id="pn-uvid">⚡</div>
+        <div class="pipe-name">UVID</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-node">
+        <div class="pipe-icon pipe-icon-fabric" id="pn-fabric">⛓</div>
+        <div class="pipe-name">Fabric</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Verify input -->
+  <div class="card">
+    <div class="card-title">🔍 Verify UVID</div>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem;line-height:1.6;">
+      Enter any UVID issued by the UVI platform. The result is fetched in real-time from Hyperledger Fabric — tamper-proof, immutable, authoritative.
+    </p>
+    <div class="scan-box" style="margin-bottom:1rem;">
+      <div class="scan-line" id="scan-line" style="display:none"></div>
+      <div class="sc-tl scan-corner"></div>
+      <div class="sc-tr scan-corner"></div>
+      <div class="sc-bl scan-corner"></div>
+      <div class="sc-br scan-corner"></div>
+      <div class="form-grid" style="grid-template-columns:1fr auto;gap:1rem;align-items:end;">
+        <div class="field">
+          <label>UVID — Unique Verification ID</label>
+          <input type="text" id="pub-uvid" placeholder="UVI-2026-XXXXXXXX"
+            oninput="this.value=this.value.toUpperCase()" autocomplete="off"/>
+        </div>
+        <button class="btn btn-primary" onclick="publicVerify()" id="btn-pub-verify">
+          <span class="btn-icon">🔍</span> VERIFY
+        </button>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+      <button class="btn btn-ghost" onclick="fillDemo('UVI-2026-DEMO01')">Demo UVID #1</button>
+      <button class="btn btn-ghost" onclick="fillDemo('UVI-2025-TEST99')">Demo UVID #2</button>
+      <button class="btn btn-ghost" onclick="fillDemo('UVI-2026-REVK01')">Revoked (test)</button>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-panel" id="pub-result">
+    <span class="result-icon" id="pub-result-icon"></span>
+    <div class="result-title" id="pub-result-title"></div>
+    <!-- UVID hologram card -->
+    <div class="uvid-hologram" id="uvid-hologram" style="display:none;margin-bottom:1.5rem;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
+        <div>
+          <div style="font-size:0.6rem;color:var(--muted);font-family:var(--font-mono);letter-spacing:2px;text-transform:uppercase;margin-bottom:0.25rem;">UVID</div>
+          <div class="uvid-string" id="uvid-display-string"></div>
+        </div>
+        <span class="trust-badge" id="trust-badge-display"></span>
+      </div>
+      <!-- Trust gauge -->
+      <div style="margin-bottom:1.5rem;">
+        <div class="gauge-container">
+          <div class="gauge-wrap">
+            <svg class="gauge-svg" viewBox="0 0 160 88">
+              <path class="gauge-track" d="M16 80 A64 64 0 0 1 144 80" stroke-linecap="round"/>
+              <path class="gauge-fill" id="gauge-path" d="M16 80 A64 64 0 0 1 144 80" stroke-linecap="round" stroke="url(#gaugeGrad)" stroke-dasharray="201" stroke-dashoffset="201"/>
+              <defs>
+                <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#00d4ff"/>
+                  <stop offset="50%" stop-color="#7c3aed"/>
+                  <stop offset="100%" stop-color="#00ff88"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="gauge-score" id="gauge-score-display">0</div>
+          </div>
+          <div class="gauge-label">TRUST SCORE / 100</div>
+        </div>
+      </div>
+      <!-- Dimension bars -->
+      <div>
+        <div class="dim-bar-wrap">
+          <div class="dim-bar-header"><span class="dim-bar-label">🪪 Identity</span><span class="dim-bar-score" id="bar-identity-score">—</span></div>
+          <div class="dim-bar-track"><div class="dim-bar-fill bar-identity" id="bar-identity" style="width:0%"></div></div>
+        </div>
+        <div class="dim-bar-wrap">
+          <div class="dim-bar-header"><span class="dim-bar-label">🎓 Education</span><span class="dim-bar-score" id="bar-edu-score">—</span></div>
+          <div class="dim-bar-track"><div class="dim-bar-fill bar-education" id="bar-edu" style="width:0%"></div></div>
+        </div>
+        <div class="dim-bar-wrap">
+          <div class="dim-bar-header"><span class="dim-bar-label">💼 Employment</span><span class="dim-bar-score" id="bar-emp-score">—</span></div>
+          <div class="dim-bar-track"><div class="dim-bar-fill bar-employment" id="bar-emp" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="uvid-meta" id="pub-result-meta"></div>
+    </div>
+    <div id="pub-result-message" style="font-size:0.85rem;line-height:1.6;"></div>
+  </div>
+
+  <!-- Terminal log -->
+  <div class="terminal" id="verify-terminal">
+    <div class="log-line"><span class="log-ts">00:00:00</span><span class="log-info">UVI Platform ready. Hyperledger Fabric connected.</span></div>
+    <div class="log-line"><span class="log-ts">00:00:00</span><span class="log-ok">API Gateway: OK | Fraud-SVC: OK | Verify-SVC: OK</span></div>
+    <div class="log-line"><span class="log-ts">——————</span><span class="log-info">Enter a UVID above to begin verification <span class="cursor"></span></span></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PANEL: CITIZEN PORTAL
+══════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-citizen">
+
+  <!-- Step wizard -->
+  <div class="wizard-steps" id="wizard-steps">
+    <div class="step active" id="ws-1" onclick="gotoStep(1)">
+      <div class="step-num">1</div><div class="step-label">Identity</div>
+    </div>
+    <div class="step" id="ws-2" onclick="gotoStep(2)">
+      <div class="step-num">2</div><div class="step-label">Education</div>
+    </div>
+    <div class="step" id="ws-3" onclick="gotoStep(3)">
+      <div class="step-num">3</div><div class="step-label">Employment</div>
+    </div>
+    <div class="step" id="ws-4" onclick="gotoStep(4)">
+      <div class="step-num">4</div><div class="step-label">Issue UVID</div>
+    </div>
+  </div>
+
+  <!-- STEP 1: Identity -->
+  <div id="citizen-step-1">
+    <div class="card">
+      <div class="card-title">🪪 Step 1 — Identity Verification</div>
+
+      <!-- Aadhaar section -->
+      <div style="margin-bottom:1.5rem">
+        <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--cyan);margin-bottom:1rem;letter-spacing:1px;">
+          AADHAAR eKYC  <span style="color:var(--muted);font-size:0.65rem;">via UIDAI</span>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Aadhaar Number</label>
+            <input type="text" id="aadhaar-num" placeholder="XXXX XXXX XXXX" maxlength="12"
+              oninput="fmtAadhaar(this)"/>
+          </div>
+          <div style="display:flex;align-items:flex-end;">
+            <button class="btn btn-primary" onclick="sendAadhaarOTP()" id="btn-send-otp" style="width:100%">
+              Send OTP
+            </button>
+          </div>
+        </div>
+        <!-- OTP Entry (hidden until OTP sent) -->
+        <div id="otp-section" style="display:none;margin-top:1rem;">
+          <div style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem;font-family:var(--font-mono);">
+            OTP sent to Aadhaar-registered mobile. Enter below:
+          </div>
+          <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+            <div class="otp-cluster">
+              <input class="otp-digit" maxlength="1" id="otp1" oninput="otpNext(this,'otp2')"/>
+              <input class="otp-digit" maxlength="1" id="otp2" oninput="otpNext(this,'otp3')"/>
+              <input class="otp-digit" maxlength="1" id="otp3" oninput="otpNext(this,'otp4')"/>
+              <input class="otp-digit" maxlength="1" id="otp4" oninput="otpNext(this,'otp5')"/>
+              <input class="otp-digit" maxlength="1" id="otp5" oninput="otpNext(this,'otp6')"/>
+              <input class="otp-digit" maxlength="1" id="otp6"/>
+            </div>
+            <button class="btn btn-primary" onclick="verifyAadhaarOTP()">Verify OTP</button>
+          </div>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:0.5rem;font-family:var(--font-mono);">
+            Dev tip: use OTP <strong style="color:var(--cyan)">123456</strong> for mock success
+          </div>
+        </div>
+        <!-- Aadhaar success indicator -->
+        <div id="aadhaar-ok" style="display:none;margin-top:1rem;padding:0.75rem;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.2);border-radius:8px;font-family:var(--font-mono);font-size:0.8rem;color:var(--emerald);">
+          ✓ Aadhaar eKYC Verified — <span id="aadhaar-name-display"></span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- PAN section -->
+      <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--cyan);margin-bottom:1rem;letter-spacing:1px;">
+        PAN VERIFICATION  <span style="color:var(--muted);font-size:0.65rem;">via NSDL</span>
+      </div>
+      <div class="form-grid">
+        <div class="field">
+          <label>PAN Number</label>
+          <input type="text" id="pan-num" placeholder="ABCDE1234F" maxlength="10"
+            oninput="this.value=this.value.toUpperCase()"/>
+        </div>
+        <div class="field">
+          <label>Full Name (as on PAN)</label>
+          <input type="text" id="pan-name" placeholder="Rahul Kumar Sharma"/>
+        </div>
+        <div class="field">
+          <label>Date of Birth</label>
+          <input type="date" id="pan-dob"/>
+        </div>
+        <div style="display:flex;align-items:flex-end;">
+          <button class="btn btn-ghost" onclick="verifyPAN()" style="width:100%">Verify PAN</button>
+        </div>
+      </div>
+      <div id="pan-ok" style="display:none;margin-top:1rem;padding:0.75rem;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.2);border-radius:8px;font-family:var(--font-mono);font-size:0.8rem;color:var(--emerald);">
+        ✓ PAN Verified — <span id="pan-status-display"></span>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Consent -->
+      <div class="consent-row" id="consent-row" onclick="toggleConsent()">
+        <input type="checkbox" id="consent-check"/>
+        <div class="consent-toggle" id="consent-toggle"></div>
+        <div class="consent-text">
+          <strong>I give explicit consent</strong> for UVI to verify my identity using Aadhaar eKYC and PAN data in accordance with the
+          IT Act, Aadhaar Act 2016, and DPDP Act 2023. My biometric data will NOT be stored.
+        </div>
+      </div>
+
+      <div style="margin-top:1.25rem;">
+        <button class="btn btn-plasma" onclick="proceedToEdu()" id="btn-to-edu">
+          Next → Education
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Education -->
+  <div id="citizen-step-2" style="display:none">
+    <div class="card">
+      <div class="card-title">🎓 Step 2 — Education Verification</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Institution Name</label>
+          <input type="text" id="edu-inst" placeholder="IIT Mumbai" value="IIT Mumbai"/>
+        </div>
+        <div class="field">
+          <label>Degree Type</label>
+          <select id="edu-degree">
+            <option value="B.Tech">B.Tech / B.E.</option>
+            <option value="M.Tech">M.Tech / M.E.</option>
+            <option value="B.Sc">B.Sc</option>
+            <option value="M.Sc">M.Sc</option>
+            <option value="MBA">MBA</option>
+            <option value="Ph.D">Ph.D</option>
+            <option value="Diploma">Diploma</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Roll / Enrollment Number</label>
+          <input type="text" id="edu-roll" placeholder="2022CS1042" value="2022CS1042"/>
+        </div>
+        <div class="field">
+          <label>Passing Year</label>
+          <input type="number" id="edu-year" placeholder="2022" value="2022" min="1980" max="2030"/>
+        </div>
+        <div class="field">
+          <label>NAD Roll Number (optional)</label>
+          <input type="text" id="edu-nad" placeholder="NAD-2022CS1042" value="2022CS1042"/>
+        </div>
+        <div class="field">
+          <label>Specialization</label>
+          <input type="text" id="edu-spec" placeholder="Computer Science" value="Computer Science"/>
+        </div>
+      </div>
+      <div style="margin-top:1.25rem;display:flex;gap:0.75rem;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="verifyEducation()">Verify Education</button>
+        <button class="btn btn-ghost" onclick="gotoStep(1)">← Back</button>
+      </div>
+      <div id="edu-ok" style="display:none;margin-top:1rem;padding:0.875rem;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.25);border-radius:8px;font-family:var(--font-mono);font-size:0.8rem;color:var(--plasma2);">
+        ✓ Education Verified — Score: <span id="edu-score-display"></span>/100 · Sources: <span id="edu-sources-display"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Employment -->
+  <div id="citizen-step-3" style="display:none">
+    <div class="card">
+      <div class="card-title">💼 Step 3 — Employment Verification</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Current / Last Employer</label>
+          <input type="text" id="emp-name" placeholder="Infosys Technologies Ltd" value="Infosys Technologies Ltd"/>
+        </div>
+        <div class="field">
+          <label>Designation</label>
+          <input type="text" id="emp-desig" placeholder="Senior Software Engineer"/>
+        </div>
+        <div class="field">
+          <label>EPFO UAN (12 digits)</label>
+          <input type="text" id="emp-uan" placeholder="100123456789" value="100123456789" maxlength="12"/>
+        </div>
+        <div class="field">
+          <label>Start Date (YYYY-MM)</label>
+          <input type="text" id="emp-start" placeholder="2022-07" value="2022-07"/>
+        </div>
+        <div class="field">
+          <label>End Date (blank if current)</label>
+          <input type="text" id="emp-end" placeholder="Leave blank if current"/>
+        </div>
+        <div class="field">
+          <label>Employer CIN (MCA21, optional)</label>
+          <input type="text" id="emp-cin" placeholder="U72000MH2020PTC000000"/>
+        </div>
+      </div>
+      <div style="margin-top:1.25rem;display:flex;gap:0.75rem;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="verifyEmployment()">Verify Employment</button>
+        <button class="btn btn-ghost" onclick="gotoStep(2)">← Back</button>
+        <button class="btn btn-ghost" onclick="gotoStep(4)" style="margin-left:auto">Skip →</button>
+      </div>
+      <div id="emp-ok" style="display:none;margin-top:1rem;padding:0.875rem;background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,0.2);border-radius:8px;font-family:var(--font-mono);font-size:0.8rem;color:var(--emerald);">
+        ✓ Employment Verified — Score: <span id="emp-score-display"></span>/100 · Exp: <span id="emp-months-display"></span> months
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: Issue UVID -->
+  <div id="citizen-step-4" style="display:none">
+    <div class="card">
+      <div class="card-title">⚡ Step 4 — Issue UVID</div>
+
+      <!-- Summary of collected sessions -->
+      <div style="margin-bottom:1.5rem;">
+        <div style="font-size:0.75rem;font-family:var(--font-mono);color:var(--muted);margin-bottom:0.75rem;letter-spacing:1px;text-transform:uppercase;">Verification Summary</div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;" id="session-summary"></div>
+      </div>
+
+      <div class="form-grid cols1">
+        <div class="field">
+          <label>Full Name (as verified)</label>
+          <input type="text" id="uvid-name" placeholder="Rahul Kumar Sharma"/>
+        </div>
+      </div>
+
+      <div class="consent-row" id="uvid-consent-row" onclick="toggleUVIDConsent()" style="margin-top:1rem;">
+        <input type="checkbox" id="uvid-consent-check"/>
+        <div class="consent-toggle" id="uvid-consent-toggle"></div>
+        <div class="consent-text">
+          <strong>Final Consent:</strong> I authorise UVI to issue a UVID anchored to Hyperledger Fabric blockchain.
+          I understand this is an immutable record and will be verifiable by authorized entities.
+        </div>
+      </div>
+
+      <div style="margin-top:1.25rem;display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-primary" onclick="issueUVID()" id="btn-issue-uvid" style="font-size:0.9rem;padding:1rem 2rem;">
+          ⚡ Issue UVID on Hyperledger Fabric
+        </button>
+        <button class="btn btn-ghost" onclick="gotoStep(3)">← Back</button>
+      </div>
+    </div>
+
+    <!-- UVID Result -->
+    <div id="uvid-issued-result" style="display:none">
+      <div class="uvid-hologram">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+          <div>
+            <div style="font-size:0.6rem;color:var(--muted);font-family:var(--font-mono);letter-spacing:2px;text-transform:uppercase;margin-bottom:0.35rem;">Your UVID</div>
+            <div class="uvid-string" id="issued-uvid-string">—</div>
+          </div>
+          <span class="trust-badge" id="issued-trust-badge"></span>
+        </div>
+
+        <div style="margin-bottom:1.5rem;">
+          <div class="dim-bar-wrap">
+            <div class="dim-bar-header"><span class="dim-bar-label">🪪 Identity</span><span class="dim-bar-score" id="issued-id-score">—</span></div>
+            <div class="dim-bar-track"><div class="dim-bar-fill bar-identity" id="issued-bar-id" style="width:0%"></div></div>
+          </div>
+          <div class="dim-bar-wrap">
+            <div class="dim-bar-header"><span class="dim-bar-label">🎓 Education</span><span class="dim-bar-score" id="issued-edu-score">—</span></div>
+            <div class="dim-bar-track"><div class="dim-bar-fill bar-education" id="issued-bar-edu" style="width:0%"></div></div>
+          </div>
+          <div class="dim-bar-wrap">
+            <div class="dim-bar-header"><span class="dim-bar-label">💼 Employment</span><span class="dim-bar-score" id="issued-emp-score">—</span></div>
+            <div class="dim-bar-track"><div class="dim-bar-fill bar-employment" id="issued-bar-emp" style="width:0%"></div></div>
+          </div>
+        </div>
+
+        <div class="uvid-meta">
+          <div class="uvid-meta-item"><label>Fabric TX</label><span id="issued-fab-tx" style="font-size:0.7rem;color:var(--muted)">—</span></div>
+          <div class="uvid-meta-item"><label>Issued At</label><span id="issued-at-display">—</span></div>
+          <div class="uvid-meta-item"><label>Expires At</label><span id="expires-at-display">—</span></div>
+        </div>
+
+        <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <button class="btn btn-ghost" onclick="copyUVID()">📋 Copy UVID</button>
+          <button class="btn btn-ghost" onclick="downloadUVIDCard()">⬇ Download Card</button>
+          <button class="btn btn-ghost" onclick="switchTab('verify')">🔍 Verify It</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live terminal for citizen flow -->
+  <div class="terminal" id="citizen-terminal" style="margin-top:1.5rem;">
+    <div class="log-line"><span class="log-ts">——</span><span class="log-info">Citizen verification pipeline ready <span class="cursor"></span></span></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PANEL: INSTITUTION
+══════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-institution">
+  <div id="inst-login-area">
+    <div class="card">
+      <div class="card-title">🏛 Institution Login</div>
+      <div class="form-grid">
+        <div class="field"><label>Email</label><input type="email" id="inst-email" placeholder="admin@university.edu.in"/></div>
+        <div class="field"><label>Password</label><input type="password" id="inst-pass" placeholder="••••••••"/></div>
+      </div>
+      <div style="margin-top:1.25rem;display:flex;gap:0.75rem;">
+        <button class="btn btn-primary" onclick="instLogin()">Login</button>
+        <button class="btn btn-ghost" onclick="showInstReg()">Register Institution</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="inst-dashboard" style="display:none">
+    <div class="stats-row">
+      <div class="stat-tile" style="--accent-color:var(--cyan)"><div class="stat-value" id="inst-total-creds" style="color:var(--cyan)">—</div><div class="stat-label">Credentials Issued</div></div>
+      <div class="stat-tile" style="--accent-color:var(--emerald)"><div class="stat-value" id="inst-active-creds" style="color:var(--emerald)">—</div><div class="stat-label">Active</div></div>
+      <div class="stat-tile" style="--accent-color:var(--ember)"><div class="stat-value" id="inst-revoked-creds" style="color:var(--ember)">—</div><div class="stat-label">Revoked</div></div>
+      <div class="stat-tile" style="--accent-color:var(--plasma2)"><div class="stat-value" id="inst-fabric-height" style="color:var(--plasma2)">—</div><div class="stat-label">Block Height</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📜 Issue Credential to Fabric</div>
+      <div class="form-grid">
+        <div class="field"><label>Holder Name</label><input type="text" id="ic-name" placeholder="Rahul Kumar Sharma"/></div>
+        <div class="field"><label>Roll Number</label><input type="text" id="ic-roll" placeholder="2022CS1042"/></div>
+        <div class="field"><label>DOB</label><input type="date" id="ic-dob"/></div>
+        <div class="field"><label>Nationality</label><input type="text" id="ic-nat" placeholder="Indian" value="Indian"/></div>
+        <div class="field"><label>Degree Type</label>
+          <select id="ic-deg">
+            <option>BACHELOR_OF_ENGINEERING</option><option>MASTER_OF_ENGINEERING</option>
+            <option>BACHELOR_OF_SCIENCE</option><option>MASTER_OF_SCIENCE</option>
+            <option>MASTER_OF_BUSINESS_ADMIN</option><option>DOCTOR_OF_PHILOSOPHY</option>
+          </select>
+        </div>
+        <div class="field"><label>Degree Name</label><input type="text" id="ic-degname" placeholder="Computer Engineering"/></div>
+        <div class="field"><label>Specialization</label><input type="text" id="ic-spec" placeholder="AI & ML"/></div>
+        <div class="field"><label>Issue Year</label><input type="number" id="ic-year" value="2024" min="2000" max="2030"/></div>
+        <div class="field"><label>Grade</label><input type="text" id="ic-grade" placeholder="First Class with Distinction"/></div>
+      </div>
+      <button class="btn btn-plasma" style="margin-top:1.25rem" onclick="issueCredential()">⛓ Anchor to Hyperledger Fabric</button>
+      <div id="ic-result" class="result-panel" style="margin-top:1rem;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Issued Credentials</div>
+      <button class="btn btn-ghost" onclick="loadCredentials()" style="margin-bottom:1rem">↻ Refresh</button>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>UVID</th><th>Holder</th><th>Degree</th><th>Year</th><th>Fabric TX</th><th>Status</th></tr></thead>
+          <tbody id="creds-tbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem">Click Refresh</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PANEL: HR PORTAL
+══════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-hr">
+  <div style="background:linear-gradient(135deg,rgba(255,154,0,0.06),rgba(255,154,0,0.01));border:1px solid rgba(255,154,0,0.2);border-radius:var(--r);padding:1rem 1.5rem;margin-bottom:1.5rem;font-size:0.85rem;line-height:1.6;">
+    🏢 <strong style="color:var(--amber)">Corporate HR Verification Portal</strong> — Verify candidate credentials in real-time on Hyperledger Fabric. Every check is logged immutably on-chain for compliance.
+  </div>
+
+  <div id="hr-login-area">
+    <div class="card">
+      <div class="card-title hr-title">🏢 HR Company Login</div>
+      <div class="form-grid">
+        <div class="field"><label>Corporate Email</label><input type="email" id="hr-email" placeholder="hr@company.com"/></div>
+        <div class="field"><label>Password</label><input type="password" id="hr-pass" placeholder="••••••••"/></div>
+      </div>
+      <div style="margin-top:1.25rem;display:flex;gap:0.75rem;">
+        <button class="btn btn-amber" onclick="hrLogin()">Login as HR</button>
+        <button class="btn btn-ghost" onclick="showHRReg()">Register Company</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="hr-dashboard" style="display:none">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-tile" style="--accent-color:var(--amber)"><div class="stat-value" id="hr-stat-total" style="color:var(--amber)">—</div><div class="stat-label">Total Checks</div></div>
+      <div class="stat-tile" style="--accent-color:var(--emerald)"><div class="stat-value" id="hr-stat-valid" style="color:var(--emerald)">—</div><div class="stat-label">Valid</div></div>
+      <div class="stat-tile" style="--accent-color:var(--ember)"><div class="stat-value" id="hr-stat-fraud" style="color:var(--ember)">—</div><div class="stat-label">Fraud Caught</div></div>
+      <div class="stat-tile" style="--accent-color:var(--plasma2)"><div class="stat-value" id="hr-stat-batch" style="color:var(--plasma2)">—</div><div class="stat-label">Batch Runs</div></div>
+    </div>
+
+    <!-- Single verify -->
+    <div class="card">
+      <div class="card-title hr-title">🔎 Verify Candidate</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Candidate's UVID</label>
+          <input type="text" id="hr-uvid-input" placeholder="UVI-2026-XXXXXXXX"
+            oninput="this.value=this.value.toUpperCase()"/>
+        </div>
+        <div class="field">
+          <label>Candidate Name (from resume)</label>
+          <input type="text" id="hr-cname" placeholder="Full name as submitted"/>
+        </div>
+        <div class="field">
+          <label>Purpose</label>
+          <select id="hr-purpose">
+            <option value="background_check">Background Check</option>
+            <option value="hiring">Pre-Hire Verification</option>
+            <option value="compliance">Compliance Audit</option>
+            <option value="promotion">Internal Promotion</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end;">
+          <button class="btn btn-amber" onclick="hrVerifySingle()" style="width:100%">🔐 Verify on Blockchain</button>
+        </div>
+      </div>
+      <div class="result-panel" id="hr-verify-result" style="margin-top:1rem;"></div>
+    </div>
+
+    <!-- Batch verify -->
+    <div class="card">
+      <div class="card-title hr-title">📋 Batch Verification</div>
+      <p style="color:var(--muted);font-size:0.8rem;margin-bottom:1rem;font-family:var(--font-mono);">
+        Paste candidates as CSV: UVID,FullName (one per line, max 50)
+      </p>
+      <textarea id="hr-batch-input" style="width:100%;height:120px;background:rgba(3,10,20,0.8);border:1px solid var(--dim);border-radius:8px;padding:0.875rem;color:var(--text);font-family:var(--font-mono);font-size:0.8rem;resize:vertical;outline:none;"
+        placeholder="UVI-2026-ABC123,Rahul Sharma&#10;UVI-2025-DEF456,Priya Patel"></textarea>
+      <button class="btn btn-amber" onclick="hrBatchVerify()" style="margin-top:0.75rem">⚡ Run Batch Verification</button>
+      <div id="batch-result" style="margin-top:1rem;"></div>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+      <div class="card-title hr-title">🗂 Verification History</div>
+      <button class="btn btn-ghost" onclick="loadHRHistory()" style="margin-bottom:1rem">↻ Refresh</button>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead><tr><th>Date/Time</th><th>UVID</th><th>Candidate</th><th>Trust Score</th><th>Result</th><th>On-Chain</th></tr></thead>
+          <tbody id="hr-history-tbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem">Click Refresh</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PANEL: BLOCKCHAIN
+══════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-chain">
+  <div class="card">
+    <div class="card-title">📡 Hyperledger Fabric Network Status</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1.5rem;" id="fabric-status-grid">
+      <div class="stat-tile"><div class="stat-value" style="color:var(--plasma2)" id="fab-height">—</div><div class="stat-label">Block Height</div></div>
+      <div class="stat-tile"><div class="stat-value" style="color:var(--emerald)" id="fab-channel">—</div><div class="stat-label">Channel</div></div>
+      <div class="stat-tile"><div class="stat-value" style="color:var(--cyan)" id="fab-chaincode">—</div><div class="stat-label">Chaincode</div></div>
+    </div>
+    <button class="btn btn-ghost" onclick="loadChainStatus()">↻ Refresh Status</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔗 Live Block Feed</div>
+    <div class="block-feed" id="block-feed">
+      <div style="color:var(--muted);font-family:var(--font-mono);font-size:0.8rem;padding:1rem;text-align:center;">Fetching blocks...</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔍 UVID Blockchain History</div>
+    <div style="display:flex;gap:0.75rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;">
+      <div class="field" style="flex:1">
+        <label>UVID</label>
+        <input type="text" id="chain-uvid-input" placeholder="UVI-2026-XXXXXXXX" oninput="this.value=this.value.toUpperCase()"/>
+      </div>
+      <button class="btn btn-plasma" onclick="loadUVIDHistory()">Query Ledger</button>
+    </div>
+    <div id="uvid-history-result" style="font-family:var(--font-mono);font-size:0.8rem;color:var(--muted)">Enter a UVID to query its full ledger history.</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PANEL: DASHBOARD
+══════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-dashboard">
+  <div class="stats-row">
+    <div class="stat-tile" style="--accent-color:var(--cyan)"><div class="stat-value" id="dash-uvids" style="color:var(--cyan)">—</div><div class="stat-label">UVIDs Issued</div></div>
+    <div class="stat-tile" style="--accent-color:var(--emerald)"><div class="stat-value" id="dash-verified" style="color:var(--emerald)">—</div><div class="stat-label">Verifications Today</div></div>
+    <div class="stat-tile" style="--accent-color:var(--ember)"><div class="stat-value" id="dash-fraud" style="color:var(--ember)">—</div><div class="stat-label">Fraud Blocked</div></div>
+    <div class="stat-tile" style="--accent-color:var(--plasma2)"><div class="stat-value" id="dash-hr" style="color:var(--plasma2)">—</div><div class="stat-label">HR Companies</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;flex-wrap:wrap;">
+    <div class="card">
+      <div class="card-title">📊 Integration Health</div>
+      <div id="integration-health">
+        <div style="color:var(--muted);font-family:var(--font-mono);font-size:0.8rem">Loading...</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🛡 Fraud Detection Stats</div>
+      <div id="fraud-stats-display">
+        <div style="color:var(--muted);font-family:var(--font-mono);font-size:0.8rem">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">⚙ System Services</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem;" id="service-health-grid">
+    </div>
+  </div>
+</div>
+
+</main>
+</div><!-- /#app -->
+
+<!-- Toast stack -->
+<div id="toast-stack"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// COSMOS CANVAS — Animated particle network
+// ══════════════════════════════════════════════════════════
+(function() {
+  const c = document.getElementById('cosmos');
+  const ctx = c.getContext('2d');
+  let W, H, particles;
+  const N = 80, MAX_DIST = 140;
+
+  function resize() {
+    W = c.width = window.innerWidth;
+    H = c.height = window.innerHeight;
+  }
+
+  function initParticles() {
+    particles = Array.from({length: N}, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 1.5 + 0.5,
+      alpha: Math.random() * 0.5 + 0.2
+    }));
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    // Draw connections
+    for (let i = 0; i < N; i++) {
+      for (let j = i + 1; j < N; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if (d < MAX_DIST) {
+          const alpha = (1 - d / MAX_DIST) * 0.15;
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(0,212,255,${alpha})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+    // Draw particles
+    particles.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0,212,255,${p.alpha})`;
+      ctx.fill();
+      // Update
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+    });
+    requestAnimationFrame(draw);
+  }
+
+  resize();
+  initParticles();
+  draw();
+  window.addEventListener('resize', () => { resize(); initParticles(); });
+})();
+
+// ══════════════════════════════════════════════════════════
+// APP STATE
+// ══════════════════════════════════════════════════════════
+const API = '';  // same origin; set to 'http://localhost:8080' for dev
+let instToken = '';
+let hrToken = '';
+let citizenState = {
+  aadhaarSession: '', panOK: false,
+  eduSession: '', empSession: '',
+  consentGiven: false, uviConsentGiven: false
+};
+let currentStep = 1;
+
+// ── Tab switching ──────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+name)?.classList.add('active');
+  document.getElementById('panel-'+name)?.classList.add('active');
+  if (name === 'chain') loadChainStatus();
+  if (name === 'dashboard') loadDashboard();
+}
+
+// ── Toast notifications ────────────────────────────────────
+function toast(msg, type='info') {
+  const stack = document.getElementById('toast-stack');
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  const icon = {ok:'✓',err:'✗',info:'●'}[type] || '●';
+  el.innerHTML = `<span style="color:var(--${type==='ok'?'emerald':type==='err'?'ember':'cyan'})">${icon}</span> ${msg}`;
+  stack.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 400);
+  }, 4000);
+}
+
+// ── Terminal logger ─────────────────────────────────────────
+function termLog(termId, msg, type='info') {
+  const term = document.getElementById(termId);
+  if (!term) return;
+  const now = new Date().toTimeString().slice(0,8);
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-ts">${now}</span><span class="log-${type}">${msg}</span>`;
+  const cursor = term.querySelector('.cursor');
+  if (cursor) cursor.parentElement.remove();
+  term.appendChild(line);
+  // Add cursor back
+  const curLine = document.createElement('div');
+  curLine.className = 'log-line';
+  curLine.innerHTML = `<span class="log-ts">——————</span><span class="log-info"><span class="cursor"></span></span>`;
+  term.appendChild(curLine);
+  term.scrollTop = term.scrollHeight;
+}
+
+// ── API helper ──────────────────────────────────────────────
+async function api(method, path, body, token) {
+  const headers = {'Content-Type':'application/json'};
+  if (token) headers['Authorization'] = 'Bearer '+token;
+  try {
+    const r = await fetch(API+path, {method, headers, body: body ? JSON.stringify(body) : undefined});
+    const data = await r.json().catch(() => ({}));
+    return {ok: r.ok, status: r.status, data};
+  } catch(e) {
+    return {ok: false, status: 0, data: {error: 'Network error — is the server running?'}};
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// PUBLIC VERIFY
+// ══════════════════════════════════════════════════════════
+function fillDemo(uvid) { document.getElementById('pub-uvid').value = uvid; }
+
+async function publicVerify() {
+  const uvid = document.getElementById('pub-uvid').value.trim();
+  if (!uvid) { toast('Enter a UVID first', 'err'); return; }
+
+  const btn = document.getElementById('btn-pub-verify');
+  btn.innerHTML = '<span class="spinner"></span> SCANNING...';
+  btn.disabled = true;
+  document.getElementById('scan-line').style.display = 'block';
+
+  termLog('verify-terminal', `→ Querying Fabric ledger for UVID: ${uvid}`, 'info');
+  termLog('verify-terminal', `→ Submitting EvaluateTransaction("GetUVID")...`, 'fabric');
+
+  // Simulate pipeline highlight
+  const nodes = ['pn-aadhaar','pn-pan','pn-edu','pn-epfo','pn-fraud','pn-uvid','pn-fabric'];
+  let ni = 0;
+  const pipeTimer = setInterval(() => {
+    if (ni > 0) document.getElementById(nodes[ni-1])?.classList.remove('active');
+    if (ni < nodes.length) {
+      document.getElementById(nodes[ni])?.classList.add('active');
+      ni++;
+    } else {
+      clearInterval(pipeTimer);
+    }
+  }, 200);
+
+  await new Promise(r => setTimeout(r, 1600));
+  const {ok, data} = await api('GET', `/api/v1/uvid/${uvid}`);
+  clearInterval(pipeTimer);
+  nodes.forEach(n => document.getElementById(n)?.classList.remove('active'));
+
+  btn.innerHTML = '<span class="btn-icon">🔍</span> VERIFY';
+  btn.disabled = false;
+  document.getElementById('scan-line').style.display = 'none';
+
+  const result = document.getElementById('pub-result');
+  result.className = 'result-panel show';
+
+  if (!ok || !data.uvid) {
+    result.classList.add('result-invalid');
+    document.getElementById('pub-result-icon').textContent = '❌';
+    document.getElementById('pub-result-title').textContent = 'NOT FOUND — UVID DOES NOT EXIST ON BLOCKCHAIN';
+    document.getElementById('pub-result-message').innerHTML = `<span style="color:var(--ember)">UVID <code>${uvid}</code> was not found on Hyperledger Fabric. This certificate may be fraudulent or invalid.</span>`;
+    document.getElementById('uvid-hologram').style.display = 'none';
+    termLog('verify-terminal', `✗ UVID not found on ledger`, 'err');
+    toast('UVID not found — may be fraudulent', 'err');
+    return;
+  }
+
+  if (data.status === 'REVOKED') {
+    result.classList.add('result-warn');
+    document.getElementById('pub-result-icon').textContent = '⚠️';
+    document.getElementById('pub-result-title').textContent = 'REVOKED — DO NOT ACCEPT';
+    document.getElementById('pub-result-message').innerHTML = `<span style="color:var(--amber)">This UVID has been revoked. Reason: ${data.revoked_reason || 'Not specified'}</span>`;
+    document.getElementById('uvid-hologram').style.display = 'none';
+    termLog('verify-terminal', `⚠ UVID ${uvid} is REVOKED`, 'warn');
+    toast('UVID is revoked', 'err');
+    return;
+  }
+
+  result.classList.add('result-valid');
+  document.getElementById('pub-result-icon').textContent = '✅';
+  document.getElementById('pub-result-title').textContent = 'AUTHENTIC — VERIFIED ON HYPERLEDGER FABRIC';
+  document.getElementById('pub-result-message').innerHTML = `<span style="color:var(--emerald)">UVID is valid, active, and verified directly from Hyperledger Fabric ledger.</span>`;
+
+  // Show hologram
+  const holo = document.getElementById('uvid-hologram');
+  holo.style.display = 'block';
+  document.getElementById('uvid-display-string').textContent = data.uvid;
+
+  const trust = data.trust_score || 75;
+  const level = trustLevel(trust);
+  document.getElementById('trust-badge-display').className = `trust-badge trust-${level.toLowerCase()}`;
+  document.getElementById('trust-badge-display').textContent = `${level} TRUST · ${trust}/100`;
+
+  // Animate gauge
+  setTimeout(() => animateGauge('gauge-path', 'gauge-score-display', trust), 100);
+
+  // Animate bars
+  const idScore = data.identity_score || 0;
+  const eduScore = data.education_score || 0;
+  const empScore = data.employment_score || 0;
+  setTimeout(() => {
+    setBar('bar-identity', idScore);  document.getElementById('bar-identity-score').textContent = idScore+'/100';
+    setBar('bar-edu', eduScore);      document.getElementById('bar-edu-score').textContent = eduScore+'/100';
+    setBar('bar-emp', empScore);      document.getElementById('bar-emp-score').textContent = empScore+'/100';
+  }, 300);
+
+  // Meta
+  document.getElementById('pub-result-meta').innerHTML = `
+    <div class="uvid-meta-item"><label>Identity</label><span style="color:${data.identity_verified?'var(--emerald)':'var(--ember)'}">${data.identity_verified?'✓ VERIFIED':'✗ UNVERIFIED'}</span></div>
+    <div class="uvid-meta-item"><label>Education</label><span style="color:${data.education_verified?'var(--emerald)':'var(--ember)'}">${data.education_verified?'✓ VERIFIED':'✗ UNVERIFIED'}</span></div>
+    <div class="uvid-meta-item"><label>Employment</label><span style="color:${data.employment_verified?'var(--emerald)':'var(--ember)'}">${data.employment_verified?'✓ VERIFIED':'✗ UNVERIFIED'}</span></div>
+    <div class="uvid-meta-item"><label>Fabric TX</label><span style="font-size:0.7rem;color:var(--muted)">${(data.fabric_tx_id||'').slice(0,14)}…</span></div>
+    <div class="uvid-meta-item"><label>Issued</label><span>${fmtDate(data.issued_at)}</span></div>
+    <div class="uvid-meta-item"><label>Expires</label><span>${fmtDate(data.expires_at)}</span></div>
+  `;
+
+  termLog('verify-terminal', `✓ UVID ${uvid} → VALID | Trust: ${trust}/100 (${level})`, 'ok');
+  termLog('verify-terminal', `✓ Fabric TX: ${(data.fabric_tx_id||'pending').slice(0,20)}`, 'fabric');
+  toast(`UVID verified — ${level} trust (${trust}/100)`, 'ok');
+}
+
+// ══════════════════════════════════════════════════════════
+// CITIZEN WIZARD
+// ══════════════════════════════════════════════════════════
+function gotoStep(n) {
+  [1,2,3,4].forEach(i => {
+    const el = document.getElementById(`citizen-step-${i}`);
+    if (el) el.style.display = i === n ? 'block' : 'none';
+    const ws = document.getElementById(`ws-${i}`);
+    if (ws) ws.className = 'step' + (i === n ? ' active' : (i < n ? ' done' : ''));
+  });
+  currentStep = n;
+}
+
+function fmtAadhaar(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,12);
+  el.value = v;
+}
+
+async function sendAadhaarOTP() {
+  const aadhaar = document.getElementById('aadhaar-num').value.replace(/\s/g,'');
+  if (aadhaar.length !== 12) { toast('Enter valid 12-digit Aadhaar number', 'err'); return; }
+  const btn = document.getElementById('btn-send-otp');
+  btn.innerHTML = '<span class="spinner"></span> Sending...'; btn.disabled = true;
+  termLog('citizen-terminal', `→ Calling UIDAI OTP API (Aadhaar: XXXX-XXXX-${aadhaar.slice(-4)})`, 'info');
+  const {ok, data} = await api('POST', '/api/v1/identity/aadhaar/send-otp', {aadhaar_number: aadhaar, consent: true});
+  btn.innerHTML = 'Send OTP'; btn.disabled = false;
+  if (!ok) { toast(data.error || 'OTP failed', 'err'); termLog('citizen-terminal', '✗ OTP failed', 'err'); return; }
+  document.getElementById('otp-section').style.display = 'block';
+  document.getElementById('otp1').focus();
+  window._otpTxId = data.transaction_id;
+  termLog('citizen-terminal', `✓ OTP sent (TX: ${data.transaction_id?.slice(0,20)})`, 'ok');
+  toast('OTP sent to Aadhaar-registered mobile', 'ok');
+}
+
+function otpNext(el, nextId) {
+  if (el.value && nextId) { document.getElementById(nextId)?.focus(); }
+  const otp = ['otp1','otp2','otp3','otp4','otp5','otp6'].map(id => document.getElementById(id).value).join('');
+  if (otp.length === 6) verifyAadhaarOTP();
+}
+
+async function verifyAadhaarOTP() {
+  const aadhaar = document.getElementById('aadhaar-num').value.replace(/\s/g,'');
+  const otp = ['otp1','otp2','otp3','otp4','otp5','otp6'].map(id => document.getElementById(id).value).join('');
+  if (otp.length < 6) { toast('Enter full 6-digit OTP', 'err'); return; }
+  termLog('citizen-terminal', `→ Verifying OTP with UIDAI...`, 'info');
+  const {ok, data} = await api('POST', '/api/v1/identity/aadhaar/verify', {
+    aadhaar_number: aadhaar, otp, transaction_id: window._otpTxId || 'MOCK-TX'
+  });
+  if (!ok) { toast('OTP verification failed', 'err'); termLog('citizen-terminal','✗ OTP invalid','err'); return; }
+  window._aadhaarSession = data.session_id;
+  document.getElementById('otp-section').style.display = 'none';
+  const okEl = document.getElementById('aadhaar-ok');
+  okEl.style.display = 'block';
+  document.getElementById('aadhaar-name-display').textContent = data.kyc_name;
+  document.getElementById('uvid-name').value = data.kyc_name || '';
+  termLog('citizen-terminal', `✓ Aadhaar eKYC verified — ${data.kyc_name}`, 'ok');
+  toast('Aadhaar eKYC verified!', 'ok');
+}
+
+async function verifyPAN() {
+  const pan = document.getElementById('pan-num').value.toUpperCase();
+  const name = document.getElementById('pan-name').value;
+  const dob = document.getElementById('pan-dob').value;
+  if (!pan || !name) { toast('Enter PAN and name', 'err'); return; }
+  termLog('citizen-terminal', `→ Calling NSDL PAN verify...`, 'info');
+  const {ok, data} = await api('POST', '/api/v1/identity/pan/verify', {pan_number: pan, full_name: name, dob});
+  if (!ok || !data.verified) { toast('PAN verification failed', 'err'); return; }
+  citizenState.panOK = true;
+  const okEl = document.getElementById('pan-ok');
+  okEl.style.display = 'block';
+  document.getElementById('pan-status-display').textContent = `${pan} — ${data.pan_status} — Name match: ${data.name_match ? 'YES ✓' : 'NO ✗'}`;
+  termLog('citizen-terminal', `✓ PAN verified — ${pan} | Score: ${data.pan_score}`, 'ok');
+  toast('PAN verified!', 'ok');
+}
+
+let consentChecked = false;
+function toggleConsent() {
+  consentChecked = !consentChecked;
+  const row = document.getElementById('consent-row');
+  row.classList.toggle('checked', consentChecked);
+  citizenState.consentGiven = consentChecked;
+}
+
+let uviConsentChecked = false;
+function toggleUVIDConsent() {
+  uviConsentChecked = !uviConsentChecked;
+  document.getElementById('uvid-consent-row').classList.toggle('checked', uviConsentChecked);
+  citizenState.uviConsentGiven = uviConsentChecked;
+}
+
+function proceedToEdu() {
+  if (!window._aadhaarSession) { toast('Complete Aadhaar eKYC first', 'err'); return; }
+  if (!citizenState.consentGiven) { toast('Please provide consent', 'err'); return; }
+  gotoStep(2);
+  toast('Identity step complete ✓', 'ok');
+}
+
+async function verifyEducation() {
+  termLog('citizen-terminal', `→ Verifying education via NAD/DigiLocker...`, 'info');
+  const body = {
+    full_name: document.getElementById('uvid-name').value || 'User',
+    institution_name: document.getElementById('edu-inst').value,
+    degree_type: document.getElementById('edu-degree').value,
+    passing_year: parseInt(document.getElementById('edu-year').value),
+    roll_number: document.getElementById('edu-roll').value,
+    nad_roll_number: document.getElementById('edu-nad').value,
+  };
+  const {ok, data} = await api('POST', '/api/v1/education/verify', body);
+  if (!ok) { toast('Education verification failed', 'err'); termLog('citizen-terminal','✗ Education verify failed','err'); return; }
+  window._eduSession = data.session_id;
+  citizenState.eduSession = data.session_id;
+  document.getElementById('edu-ok').style.display = 'block';
+  document.getElementById('edu-score-display').textContent = data.education_score;
+  document.getElementById('edu-sources-display').textContent = (data.verification_sources||[]).join(', ') || 'Mock';
+  termLog('citizen-terminal', `✓ Education verified — Score: ${data.education_score}/100`, 'ok');
+  toast(`Education verified — ${data.education_score}/100`, 'ok');
+  setTimeout(() => gotoStep(3), 800);
+}
+
+async function verifyEmployment() {
+  termLog('citizen-terminal', `→ Verifying employment via EPFO...`, 'info');
+  const body = {
+    full_name: document.getElementById('uvid-name').value || 'User',
+    uan: document.getElementById('emp-uan').value,
+    employer_name: document.getElementById('emp-name').value,
+    designation: document.getElementById('emp-desig').value,
+    start_date: document.getElementById('emp-start').value,
+    end_date: document.getElementById('emp-end').value,
+    pan_number: document.getElementById('pan-num').value,
+    employer_cin: document.getElementById('emp-cin').value,
+  };
+  const {ok, data} = await api('POST', '/api/v1/employment/verify', body);
+  if (!ok) { toast('Employment verification failed — continuing', 'info'); }
+  window._empSession = data?.session_id || '';
+  citizenState.empSession = window._empSession;
+  document.getElementById('emp-ok').style.display = 'block';
+  document.getElementById('emp-score-display').textContent = data?.employment_score || 0;
+  document.getElementById('emp-months-display').textContent = data?.total_experience_months || 0;
+  termLog('citizen-terminal', `✓ Employment verified — Score: ${data?.employment_score||0}/100`, 'ok');
+  toast(`Employment verified — ${data?.employment_score||0}/100`, 'ok');
+  // Update session summary and go to step 4
+  updateSessionSummary();
+  setTimeout(() => gotoStep(4), 800);
+}
+
+function updateSessionSummary() {
+  const el = document.getElementById('session-summary');
+  el.innerHTML = [
+    window._aadhaarSession ? `<span class="chip chip-fabric" style="font-size:0.7rem">🪪 Identity ✓</span>` : '',
+    window._eduSession ? `<span class="chip chip-fabric" style="font-size:0.7rem;border-color:rgba(124,58,237,0.4);color:var(--plasma2)">🎓 Education ✓</span>` : '',
+    window._empSession ? `<span class="chip chip-fabric" style="font-size:0.7rem;border-color:rgba(0,255,136,0.4);color:var(--emerald)">💼 Employment ✓</span>` : '',
+  ].join('');
+}
+
+async function issueUVID() {
+  if (!citizenState.uviConsentGiven) { toast('Provide final consent to issue UVID', 'err'); return; }
+  const btn = document.getElementById('btn-issue-uvid');
+  btn.innerHTML = '<span class="spinner"></span> Anchoring to Fabric...'; btn.disabled = true;
+  termLog('citizen-terminal', `→ Generating composite hash...`, 'info');
+  termLog('citizen-terminal', `→ Running fraud detection...`, 'warn');
+  termLog('citizen-terminal', `→ Submitting to Hyperledger Fabric...`, 'fabric');
+
+  const {ok, data} = await api('POST', '/api/v1/uvid/issue', {
+    full_name: document.getElementById('uvid-name').value,
+    identity_session_id: window._aadhaarSession || '',
+    education_session_id: window._eduSession || '',
+    employment_session_id: window._empSession || '',
+    consent_given: true,
+  });
+
+  btn.innerHTML = '⚡ Issue UVID on Hyperledger Fabric'; btn.disabled = false;
+
+  if (!ok) {
+    toast(data.error || 'UVID issuance failed', 'err');
+    termLog('citizen-terminal', `✗ UVID issuance failed: ${data.error}`, 'err');
+    return;
+  }
+
+  const trust = data.trust_score || 0;
+  const level = trustLevel(trust);
+  const el = document.getElementById('uvid-issued-result');
+  el.style.display = 'block';
+  document.getElementById('issued-uvid-string').textContent = data.uvid;
+  document.getElementById('issued-trust-badge').className = `trust-badge trust-${level.toLowerCase()}`;
+  document.getElementById('issued-trust-badge').textContent = `${level} · ${trust}/100`;
+  document.getElementById('issued-fab-tx').textContent = (data.fabric_tx_id||'PENDING').slice(0,20)+'…';
+  document.getElementById('issued-at-display').textContent = fmtDate(data.issued_at);
+  document.getElementById('expires-at-display').textContent = fmtDate(data.expires_at);
+
+  setTimeout(() => {
+    setBar('issued-bar-id', data.identity_score||0);
+    setBar('issued-bar-edu', data.education_score||0);
+    setBar('issued-bar-emp', data.employment_score||0);
+    document.getElementById('issued-id-score').textContent = (data.identity_score||0)+'/100';
+    document.getElementById('issued-edu-score').textContent = (data.education_score||0)+'/100';
+    document.getElementById('issued-emp-score').textContent = (data.employment_score||0)+'/100';
+  }, 200);
+
+  window._issuedUVID = data.uvid;
+  termLog('citizen-terminal', `✓ UVID issued: ${data.uvid} | Trust: ${trust}/100 (${level})`, 'ok');
+  termLog('citizen-terminal', `✓ Anchored to Fabric | TX: ${(data.fabric_tx_id||'PENDING').slice(0,20)}`, 'fabric');
+  toast(`UVID issued: ${data.uvid}`, 'ok');
+}
+
+function copyUVID() {
+  navigator.clipboard?.writeText(window._issuedUVID || '');
+  toast('UVID copied to clipboard', 'ok');
+}
+function downloadUVIDCard() { toast('Download feature: implement PDF generation', 'info'); }
+
+// ══════════════════════════════════════════════════════════
+// INSTITUTION
+// ══════════════════════════════════════════════════════════
+async function instLogin() {
+  const {ok, data} = await api('POST', '/api/v1/auth/login', {
+    email: document.getElementById('inst-email').value,
+    password: document.getElementById('inst-pass').value,
+  });
+  if (!ok) { toast(data.error || 'Login failed', 'err'); return; }
+  instToken = data.token;
+  document.getElementById('inst-login-area').style.display = 'none';
+  document.getElementById('inst-dashboard').style.display = 'block';
+  toast(`Logged in as ${data.name}`, 'ok');
+  loadCredentials();
+}
+
+async function issueCredential() {
+  const body = {
+    holder_name: document.getElementById('ic-name').value,
+    holder_dob: document.getElementById('ic-dob').value,
+    holder_nationality: document.getElementById('ic-nat').value,
+    roll_number: document.getElementById('ic-roll').value,
+    degree_type: document.getElementById('ic-deg').value,
+    degree_name: document.getElementById('ic-degname').value,
+    specialization: document.getElementById('ic-spec').value,
+    issue_year: parseInt(document.getElementById('ic-year').value),
+    grade: document.getElementById('ic-grade').value,
+  };
+  const {ok, data} = await api('POST', '/api/v1/credentials/issue', body, instToken);
+  const res = document.getElementById('ic-result');
+  res.className = 'result-panel show ' + (ok ? 'result-valid' : 'result-invalid');
+  res.innerHTML = ok
+    ? `<strong style="color:var(--emerald)">✓ Credential Anchored!</strong><br><br>
+       <span style="font-family:var(--font-mono);font-size:0.8rem">UVID: <strong>${data.uvid}</strong><br>Fabric TX: ${data.fabric_tx||'confirmed'}</span>`
+    : `<strong style="color:var(--ember)">✗ Failed: ${data.error}</strong>`;
+  if (ok) { toast(`Credential issued: ${data.uvid}`, 'ok'); loadCredentials(); }
+}
+
+async function loadCredentials() {
+  const {ok, data} = await api('GET', '/api/v1/credentials', null, instToken);
+  const tbody = document.getElementById('creds-tbody');
+  if (!ok || !data.credentials?.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem">No credentials yet</td></tr>'; return;
+  }
+  tbody.innerHTML = data.credentials.map(c => `
+    <tr>
+      <td><code style="color:var(--cyan);font-size:0.75rem">${c.uvid}</code></td>
+      <td>${c.holder_name}</td>
+      <td style="color:var(--muted)">${c.degree_type?.replace(/_/g,' ')}</td>
+      <td>${c.issue_year}</td>
+      <td><code style="color:var(--muted);font-size:0.7rem">${(c.fabric_tx_id||'—').slice(0,12)}…</code></td>
+      <td><span class="chip ${c.is_revoked?'chip-live':'chip-fabric'}">${c.is_revoked?'REVOKED':'ACTIVE'}</span></td>
+    </tr>`).join('');
+  document.getElementById('inst-total-creds').textContent = data.credentials.length;
+  document.getElementById('inst-active-creds').textContent = data.credentials.filter(c=>!c.is_revoked).length;
+  document.getElementById('inst-revoked-creds').textContent = data.credentials.filter(c=>c.is_revoked).length;
+}
+
+function showInstReg() { toast('Register via POST /api/v1/institutions/register', 'info'); }
+
+// ══════════════════════════════════════════════════════════
+// HR PORTAL
+// ══════════════════════════════════════════════════════════
+async function hrLogin() {
+  const {ok, data} = await api('POST', '/api/v1/hr/auth/login', {
+    email: document.getElementById('hr-email').value,
+    password: document.getElementById('hr-pass').value,
+  });
+  if (!ok) { toast(data.error || 'HR login failed', 'err'); return; }
+  hrToken = data.token;
+  document.getElementById('hr-login-area').style.display = 'none';
+  document.getElementById('hr-dashboard').style.display = 'block';
+  toast(`Welcome, ${data.company_name}`, 'ok');
+  loadHRProfile();
+  loadHRHistory();
+}
+
+async function loadHRProfile() {
+  const {ok, data} = await api('GET', '/api/v1/hr/profile', null, hrToken);
+  if (!ok) return;
+  const s = data.stats || {};
+  document.getElementById('hr-stat-total').textContent = s.total_verifications || 0;
+  document.getElementById('hr-stat-valid').textContent = s.valid_credentials || 0;
+  document.getElementById('hr-stat-fraud').textContent = s.fraudulent_caught || 0;
+  document.getElementById('hr-stat-batch').textContent = 0;
+}
+
+async function hrVerifySingle() {
+  const uvid = document.getElementById('hr-uvid-input').value.trim();
+  const name = document.getElementById('hr-cname').value.trim();
+  if (!uvid || !name) { toast('Enter UVID and candidate name', 'err'); return; }
+  const {ok, data} = await api('POST', '/api/v1/hr/verify', {
+    uvid, candidate_name: name, purpose: document.getElementById('hr-purpose').value
+  }, hrToken);
+  const res = document.getElementById('hr-verify-result');
+
+  let cls, icon, titleColor;
+  if (!ok || !data.credential_valid) {
+    cls = 'result-invalid'; icon = '❌'; titleColor = 'var(--ember)';
+  } else {
+    cls = 'result-valid'; icon = '✅'; titleColor = 'var(--emerald)';
+  }
+  res.className = `result-panel show ${cls}`;
+  res.innerHTML = `
+    <div class="result-icon">${icon}</div>
+    <div class="result-title" style="color:${titleColor}">${data.credential_valid ? 'VERIFIED — CANDIDATE IS GENUINE' : 'VERIFICATION FAILED'}</div>
+    <div class="result-grid">
+      <div class="result-item"><label>Credential Valid</label><span style="color:${data.credential_valid?'var(--emerald)':'var(--ember)'}">${data.credential_valid?'✓ VALID':'✗ INVALID'}</span></div>
+      <div class="result-item"><label>Name Match</label><span style="color:${data.name_match?'var(--emerald)':'var(--ember)'}">${data.name_match?'✓ MATCHED':'✗ MISMATCH'}</span></div>
+      ${data.institution_name?`<div class="result-item"><label>Institution</label><span>${data.institution_name}</span></div>`:''}
+      ${data.degree_type?`<div class="result-item"><label>Degree</label><span>${data.degree_type?.replace(/_/g,' ')}</span></div>`:''}
+      ${data.trust_score_seen!=null?`<div class="result-item"><label>Trust Score</label><span>${data.trust_score_seen}/100</span></div>`:''}
+      <div class="result-item"><label>Audit Log</label><span class="chip chip-fabric">⛓ On-Chain</span></div>
+    </div>
+    <div style="margin-top:1rem;font-size:0.85rem;opacity:0.8;font-family:var(--font-mono)">${data.message||''}</div>`;
+  loadHRProfile();
+  loadHRHistory();
+  toast(data.credential_valid ? 'Candidate verified ✓' : 'Verification failed', data.credential_valid?'ok':'err');
+}
+
+async function hrBatchVerify() {
+  const raw = document.getElementById('hr-batch-input').value.trim();
+  if (!raw) { toast('Paste CSV data first', 'err'); return; }
+  const candidates = raw.split('\n').filter(Boolean).map(line => {
+    const [uvid, ...nameParts] = line.split(',');
+    return { uvid: uvid.trim().toUpperCase(), candidate_name: nameParts.join(',').trim(), purpose: 'background_check' };
+  });
+  const {ok, data} = await api('POST', '/api/v1/hr/verify/batch', {candidates}, hrToken);
+  const el = document.getElementById('batch-result');
+  if (!ok) { el.innerHTML = `<div style="color:var(--ember);font-family:var(--font-mono);font-size:0.8rem">Batch failed: ${data.error}</div>`; return; }
+  const v = data.summary?.valid || 0;
+  const inv = data.summary?.invalid || 0;
+  el.innerHTML = `
+    <div style="padding:1rem;background:rgba(0,212,255,0.05);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:0.8rem;">
+      <div style="margin-bottom:0.75rem;color:var(--cyan);font-weight:700;">BATCH COMPLETE — ${data.processed} processed</div>
+      <div style="display:flex;gap:1rem;">
+        <span style="color:var(--emerald)">✓ Valid: ${v}</span>
+        <span style="color:var(--ember)">✗ Invalid: ${inv}</span>
+        <span style="color:var(--plasma2)">⛓ On-chain: ${data.processed}</span>
+      </div>
+    </div>`;
+  toast(`Batch: ${v} valid, ${inv} invalid`, 'ok');
+}
+
+async function loadHRHistory() {
+  const {ok, data} = await api('GET', '/api/v1/hr/verifications', null, hrToken);
+  const tbody = document.getElementById('hr-history-tbody');
+  if (!ok || !data.verifications?.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem">No verifications yet</td></tr>'; return;
+  }
+  tbody.innerHTML = data.verifications.map(v => `
+    <tr>
+      <td style="color:var(--muted);font-size:0.75rem">${fmtDate(v.verified_at)}</td>
+      <td><code style="color:var(--cyan);font-size:0.75rem">${v.uvid}</code></td>
+      <td>${v.candidate_name}</td>
+      <td>${v.trust_score_seen != null ? `${v.trust_score_seen}/100` : '—'}</td>
+      <td><span class="chip ${v.result_valid?'chip-fabric':'chip-live'}">${v.result_valid?'✓ VALID':'✗ INVALID'}</span></td>
+      <td><span class="chip" style="border-color:rgba(124,58,237,0.3);color:var(--plasma2)">⛓ LOGGED</span></td>
+    </tr>`).join('');
+}
+
+function showHRReg() { toast('Register via POST /api/v1/hr/register', 'info'); }
+
+// ══════════════════════════════════════════════════════════
+// BLOCKCHAIN PANEL
+// ══════════════════════════════════════════════════════════
+async function loadChainStatus() {
+  const {ok, data} = await api('GET', '/api/v1/chain/status');
+  document.getElementById('fab-channel').textContent = data.network || 'uvichannel';
+  document.getElementById('fab-chaincode').textContent = data.chaincode || 'uvichaincode';
+  document.getElementById('fab-height').textContent = data.height ?? '—';
+  simulateBlockFeed();
+}
+
+function simulateBlockFeed() {
+  const feed = document.getElementById('block-feed');
+  feed.innerHTML = '';
+  const now = Date.now();
+  for (let i = 8; i >= 0; i--) {
+    const height = 4800 + (8-i);
+    const hash = Array.from({length:16},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+    const ago = i * 15;
+    const item = document.createElement('div');
+    item.className = 'block-item';
+    item.innerHTML = `
+      <div class="block-dot"></div>
+      <div class="block-height">#${height}</div>
+      <div class="block-hash">0x${hash}…</div>
+      <div class="block-time">${ago === 0 ? 'now' : ago+'s ago'}</div>`;
+    feed.appendChild(item);
+  }
+}
+
+async function loadUVIDHistory() {
+  const uvid = document.getElementById('chain-uvid-input').value.trim();
+  if (!uvid) { toast('Enter a UVID', 'err'); return; }
+  const {ok, data} = await api('GET', `/api/v1/uvid/${uvid}/history`);
+  const el = document.getElementById('uvid-history-result');
+  if (!ok) { el.innerHTML = `<span style="color:var(--ember)">Not found on ledger</span>`; return; }
+  const history = data.history || [];
+  if (!history.length) { el.innerHTML = `<span style="color:var(--muted)">No history found</span>`; return; }
+  el.innerHTML = history.map((h,i) => `
+    <div style="padding:0.75rem;border-left:2px solid ${i===0?'var(--cyan)':'var(--dim)'};margin-bottom:0.5rem;padding-left:1rem;">
+      <div style="font-size:0.65rem;color:var(--muted);margin-bottom:0.25rem">${h.txID?.slice(0,24)}… · ${fmtDate(h.timestamp)}</div>
+      <div style="font-size:0.8rem;color:${i===0?'var(--cyan)':'var(--text)'}">
+        ${h.isDelete ? '🗑 DELETED' : `Trust: ${h.record?.trustScore||0} | Status: ${h.record?.isRevoked?'REVOKED':'ACTIVE'}`}
+      </div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════════════
+async function loadDashboard() {
+  // Mock stats
+  document.getElementById('dash-uvids').textContent = animateCount('dash-uvids', 12847);
+  document.getElementById('dash-verified').textContent = '—';
+  document.getElementById('dash-fraud').textContent = '—';
+  document.getElementById('dash-hr').textContent = '—';
+
+  // Service health grid
+  const services = [
+    {name:'API Gateway', port:8080, color:'var(--cyan)'},
+    {name:'Identity', port:8081, color:'var(--cyan)'},
+    {name:'Education', port:8082, color:'var(--plasma2)'},
+    {name:'Employment', port:8083, color:'var(--emerald)'},
+    {name:'UVID', port:8084, color:'var(--gold)'},
+    {name:'Verify', port:8085, color:'var(--cyan)'},
+    {name:'HR Portal', port:8086, color:'var(--amber)'},
+    {name:'Fraud', port:8088, color:'var(--ember)'},
+    {name:'Mock APIs', port:8099, color:'var(--muted)'},
+  ];
+  const grid = document.getElementById('service-health-grid');
+  grid.innerHTML = '';
+  for (const svc of services) {
+    const el = document.createElement('div');
+    el.style.cssText = 'padding:0.75rem;background:rgba(7,17,31,0.8);border:1px solid var(--border);border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;';
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+        <div style="width:6px;height:6px;border-radius:50%;background:var(--dim)" id="dot-${svc.port}"></div>
+        <span style="color:var(--text);font-weight:700">${svc.name}</span>
+      </div>
+      <div style="color:var(--muted)">:${svc.port}</div>`;
+    grid.appendChild(el);
+    // Check health
+    fetch(`/health`).then(r => {
+      const dot = document.getElementById(`dot-${svc.port}`);
+      if (dot) dot.style.background = r.ok ? 'var(--emerald)' : 'var(--ember)';
+    }).catch(() => {});
+  }
+
+  // Integration health
+  document.getElementById('integration-health').innerHTML = [
+    ['DigiLocker','🟢 MOCK ACTIVE'],
+    ['UIDAI Aadhaar','🟢 MOCK ACTIVE'],
+    ['EPFO','🟢 MOCK ACTIVE'],
+    ['NSDL PAN','🟢 MOCK ACTIVE'],
+    ['NAD','🟢 MOCK ACTIVE'],
+    ['MCA21','🟢 MOCK ACTIVE'],
+  ].map(([k,v]) => `
+    <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:0.8rem;">
+      <span style="color:var(--muted)">${k}</span><span>${v}</span>
+    </div>`).join('');
+
+  // Fraud stats
+  const {data: fraudData} = await api('GET', '/api/v1/fraud/stats');
+  if (fraudData?.total_checks != null) {
+    document.getElementById('fraud-stats-display').innerHTML = `
+      <div style="font-family:var(--font-mono);font-size:0.85rem;display:flex;flex-direction:column;gap:0.5rem;">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Total Checks</span><span>${fraudData.total_checks}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Flagged</span><span style="color:var(--ember)">${fraudData.flagged}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Critical</span><span style="color:var(--ember)">${fraudData.critical}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Clean</span><span style="color:var(--emerald)">${fraudData.clean}</span></div>
+      </div>`;
+    document.getElementById('dash-fraud').textContent = fraudData.flagged || 0;
+  }
+}
+
+function animateCount(id, target) {
+  let current = 0;
+  const step = target / 40;
+  const el = document.getElementById(id);
+  const timer = setInterval(() => {
+    current = Math.min(current + step, target);
+    if (el) el.textContent = Math.floor(current).toLocaleString('en-IN');
+    if (current >= target) clearInterval(timer);
+  }, 30);
+  return target.toLocaleString('en-IN');
+}
+
+// ══════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════
+function trustLevel(score) {
+  if (score >= 85) return 'HIGH';
+  if (score >= 65) return 'MEDIUM';
+  if (score >= 40) return 'LOW';
+  return 'UNVERIFIED';
+}
+
+function animateGauge(pathId, scoreId, score) {
+  const path = document.getElementById(pathId);
+  const scoreEl = document.getElementById(scoreId);
+  if (!path) return;
+  const total = 201; // arc length for 180deg
+  const offset = total - (total * score / 100);
+  path.style.strokeDashoffset = offset;
+  // Set color based on score
+  const color = score >= 85 ? '#00ff88' : score >= 65 ? '#ffd700' : score >= 40 ? '#ff9a00' : '#ff4d6d';
+  path.style.stroke = color;
+  // Animate number
+  let current = 0;
+  const step = score / 30;
+  const timer = setInterval(() => {
+    current = Math.min(current + step, score);
+    if (scoreEl) scoreEl.textContent = Math.floor(current);
+    if (current >= score) clearInterval(timer);
+  }, 30);
+}
+
+function setBar(id, score) {
+  const el = document.getElementById(id);
+  if (el) el.style.width = Math.min(score, 100) + '%';
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleDateString('en-IN', {year:'numeric',month:'short',day:'numeric'}); }
+  catch(e) { return d; }
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(loadChainStatus, 500);
+  gotoStep(1);
+});
+</script>
+</body>
+</html>
