@@ -65,3 +65,4 @@ celerybeat.pid
 trivy-*.sarif
 bandit-report.json
 safety-report.json
+G_UIVI/
