@@ -4,7 +4,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import {
-  Shield, AlertTriangle, CheckCircle, Clock, Activity,
+  Shield, CheckCircle, Activity,
   ExternalLink, Trash2, RefreshCw, ChevronLeft, Lock,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -134,7 +134,7 @@ export function ScanDetailPage() {
 
   const rescanMut = useMutation({
     mutationFn: () => api.rescan(scanId!),
-    onSuccess: (res) => {
+    onSuccess: () => {
       toast.success("Re-scan queued!");
       qc.invalidateQueries({ queryKey: ["scans"] });
     },

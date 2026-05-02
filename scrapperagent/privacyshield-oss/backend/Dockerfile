@@ -11,14 +11,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies into /build/venv
-COPY requirements.txt .
+COPY requirements-runtime.txt .
 RUN python -m venv /build/venv \
-    && /build/venv/bin/pip install --upgrade pip \
-    && /build/venv/bin/pip install --no-cache-dir -r requirements.txt
+    && /build/venv/bin/pip install --upgrade pip setuptools wheel \
+    && /build/venv/bin/pip install --no-cache-dir -r requirements-runtime.txt
 
 # Download spaCy model
-RUN /build/venv/bin/python -m spacy download en_core_web_trf || \
-    /build/venv/bin/python -m spacy download en_core_web_sm
+RUN /build/venv/bin/python -m spacy download en_core_web_sm || true
 
 # ────────────────────────────────────────────────────────────────────────────
 # Stage 2 — Runtime (minimal attack surface)

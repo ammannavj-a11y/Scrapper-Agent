@@ -112,7 +112,6 @@ export function DashboardHome() {
   });
 
   const latestCompleted = scans.find(s => s.status === "completed" && s.exposure_score != null);
-  const avgScore = scans.filter(s => s.exposure_score != null).reduce((sum, s) => sum + (s.exposure_score ?? 0), 0) / (scans.filter(s => s.exposure_score != null).length || 1);
   const totalPII = scans.reduce((sum, s) => sum + s.pii_instances_found, 0);
   const activeRemovals = scans.filter(s => s.status === "running").length;
 

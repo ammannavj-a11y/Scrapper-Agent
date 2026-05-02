@@ -4,7 +4,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../store/authStore";
 import {
   Shield, LayoutDashboard, ScanLine, Trash2, Settings,
-  LogOut, ChevronDown, Crown, Menu, X,
+  LogOut, Crown, Menu, X,
 } from "lucide-react";
 import { useState } from "react";
 
